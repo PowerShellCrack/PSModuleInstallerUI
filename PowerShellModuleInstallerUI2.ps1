@@ -2949,43 +2949,41 @@ $AllSolutionData = @()
 Write-Host ("Launching {0} [ver: {1}]..." -f $UIConfig.Title,$UIConfig.version ) -ForegroundColor Cyan
 Write-Host "=========================================================================" -ForegroundColor Cyan
 $totalSteps = 7
-$buildSequence = Show-SequenceWindow -Config $UIConfig -Message "Building Selection UI, please wait..."
-Update-SequenceProgressBar -Runspace $buildSequence -ProgressBar 'ProgressBarMain' -Indeterminate -Message ("Load data for menu...")
+$Global:BuildSequence = Show-SequenceWindow -Config $UIConfig -Message "Building Selection UI, please wait..."
+Update-SequenceProgressBar -Runspace $Global:BuildSequence -ProgressBar 'ProgressBarMain' -Indeterminate -Message ("Load data for menu...")
 Write-LogEntry -Message ("Loading UI, please wait...") -Source $MyInvocation.MyCommand.Name -Severity 0
 Start-Sleep 3
 
-Update-SequenceProgressBar -Runspace $buildSequence -ProgressBar 'ProgressBarMain' -Step 1 -MaxStep $totalSteps
-Update-SequenceProgressBar -Runspace $buildSequence -ProgressBar 'ProgressBarSub' -Indeterminate -Message ("Retrieving all installed modules on: {0}..." -f $env:Computername)
+Update-SequenceProgressBar -Runspace $Global:BuildSequence -ProgressBar 'ProgressBarMain' -Step 1 -MaxStep $totalSteps
+Update-SequenceProgressBar -Runspace $Global:BuildSequence -ProgressBar 'ProgressBarSub' -Indeterminate -Message ("Retrieving all installed modules on: {0}..." -f $env:Computername)
 Write-LogEntry -Message ("Retrieving all installed modules on: {0}..." -f $env:Computername) -Source $MyInvocation.MyCommand.Name -Severity 0
 #only get installed module:
-$Global:InstalledModules = @()
+$InstalledModules = @()
 #this will get all installed modules (if running under SYSTEM, only modules for SYSTEM will be included)
-#$Global:InstalledModules += Get-InstalledModule | Select Name, Version, Description, Author, CompanyName, InstalledLocation
-$Global:InstalledModules += Get-AllModules |
+#$InstalledModules += Get-InstalledModule | Select Name, Version, Description, Author, CompanyName, InstalledLocation
+$InstalledModules += Get-AllModules |
         Select Name, Version, Description, Author, CompanyName, @{Name='InstalledLocation';Expression={Split-Path $_.Path -Parent}}
 
 #this will get all modules for the logged on user (even if running under SYSTEM)
 $UserModulePath = Get-LoggedOnUser -Passthru | Get-UserModulePath | Get-UserInstalledModule
 Foreach($UserModule in $UserModulePath){
-    if($UserModule.Name -notin $Global:InstalledModules.Name){
+    if($UserModule.Name -notin $InstalledModules.Name){
         Write-LogEntry -Message ("Adding user module: {0}" -f $UserModule.Name) -Source $MyInvocation.MyCommand.Name -Severity 0
-        $Global:InstalledModules += $UserModule
+        $InstalledModules += $UserModule
     }
 }
-#remove PowerShellGet and PackageManagement modules from list
-$Global:InstalledModules = $Global:InstalledModules | Where-Object {$_.Name -NotMatch "PowerShellGet|PackageManagement"}
-Write-LogEntry -Message ("Found [{0}] installed modules on: {1}" -f $Global:InstalledModules.Count,$env:Computername) -Source $MyInvocation.MyCommand.Name -Severity 0
+Write-LogEntry -Message ("Found [{0}] installed modules on: {1}" -f $InstalledModules.Count,$env:Computername) -Source $MyInvocation.MyCommand.Name -Severity 0
 
 #build UI for tab items
 
 $i=0
 #TEST $ModuleGroupItem = $UIConfig.ModuleGroups[0]
 #TEST $ModuleGroupItem = $UIConfig.ModuleGroups[1]
-Update-SequenceProgressBar -Runspace $buildSequence -ProgressBar 'ProgressBarMain' -Step 2 -MaxStep $totalSteps
+Update-SequenceProgressBar -Runspace $Global:BuildSequence -ProgressBar 'ProgressBarMain' -Step 2 -MaxStep $totalSteps
 Foreach($ModuleGroupItem in $UIConfig.ModuleGroups){
     $i++
     Write-LogEntry -Message ("Building menu for module: {0}..." -f $ModuleGroupItem.Name) -Source $MyInvocation.MyCommand.Name -Severity 1
-    Update-SequenceProgressBar -Runspace $buildSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxStep $UIConfig.ModuleGroups.Count -Message ("Building menu for module: {0}..." -f $ModuleGroupItem.Name)
+    Update-SequenceProgressBar -Runspace $Global:BuildSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxStep $UIConfig.ModuleGroups.Count -Message ("Building menu for module: {0}..." -f $ModuleGroupItem.Name)
     #if first make it selected
     $Selected = $false
     If($TabItemData.count -eq 0){ $Selected = $true}
@@ -2998,13 +2996,13 @@ Foreach($ModuleGroupItem in $UIConfig.ModuleGroups){
 }
 
 #build UI for solution tab items
-Update-SequenceProgressBar -Runspace $buildSequence -ProgressBar 'ProgressBarMain' -Step 3 -MaxStep $totalSteps
+Update-SequenceProgressBar -Runspace $Global:BuildSequence -ProgressBar 'ProgressBarMain' -Step 3 -MaxStep $totalSteps
 $SolutionTabData = $UIConfig.SolutionGroupedModules | Add-UISolutionTabItem
 $i=0
 Foreach($SolutionTabItem in $SolutionTabData){
     $i++
     Write-LogEntry -Message ("Building menu for solution: {0}..." -f $SolutionTabItem.Name) -Source $MyInvocation.MyCommand.Name -Severity 1
-    Update-SequenceProgressBar -Runspace $buildSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxStep $SolutionTabData.Count -Message ("Building menu for solution: {0}..." -f $SolutionTabItem.Name)
+    Update-SequenceProgressBar -Runspace $Global:BuildSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxStep $SolutionTabData.Count -Message ("Building menu for solution: {0}..." -f $SolutionTabItem.Name)
     Start-Sleep 1
 }
 #build data for each tab item
@@ -3014,15 +3012,15 @@ $TabControlXaml += $UIConfig.SolutionGroupedModules | Add-UISolutionTabItem -Pas
 Write-LogEntry -Message ("Built [{0}] menu items" -f $TabItemData.Count) -Source $MyInvocation.MyCommand.Name -Severity 1
 
 # update module group; split beta from released and add elements
-Update-SequenceProgressBar -Runspace $buildSequence -ProgressBar 'ProgressBarMain' -Step 4 -MaxStep $totalSteps
-Update-SequenceProgressBar -Runspace $buildSequence -ProgressBar 'ProgressBarSub' -Indeterminate -Message ("Building Module Groups for search criteria...")
+Update-SequenceProgressBar -Runspace $Global:BuildSequence -ProgressBar 'ProgressBarMain' -Step 4 -MaxStep $totalSteps
+Update-SequenceProgressBar -Runspace $Global:BuildSequence -ProgressBar 'ProgressBarSub' -Indeterminate -Message ("Building Module Groups for search criteria...")
 Write-LogEntry -Message ("Building Module Groups for search criteria...") -Source $MyInvocation.MyCommand.Name -Severity 1
 $ModuleSearchData = $UIConfig.ModuleGroups | Merge-ModuleObject -MergeData ($TabItemData | Where Type -eq 'Module')
 
 If(-not $PSBoundParameters.ContainsKey('SkipSolutionData')){
     Start-Sleep 1
     Write-LogEntry -Message ("Building Solution Groups for search criteria...") -Source $MyInvocation.MyCommand.Name -Severity 1
-    Update-SequenceProgressBar -Runspace $buildSequence -ProgressBar 'ProgressBarSub' -Indeterminate -Message ("Building Solution Groups for search criteria...")
+    Update-SequenceProgressBar -Runspace $Global:BuildSequence -ProgressBar 'ProgressBarSub' -Indeterminate -Message ("Building Solution Groups for search criteria...")
     $SolutionSearchData = $UIConfig.SolutionGroupedModules | Merge-SolutionObject -MergeData ($TabItemData | Where Type -eq 'Solution')
 }
 
@@ -3032,7 +3030,7 @@ If(-not $PSBoundParameters.ContainsKey('SkipSolutionData')){
 
 
 #determine if we are using preloaded data
-Update-SequenceProgressBar -Runspace $buildSequence -ProgressBar 'ProgressBarMain' -Step 5 -MaxStep $totalSteps
+Update-SequenceProgressBar -Runspace $Global:BuildSequence -ProgressBar 'ProgressBarMain' -Step 5 -MaxStep $totalSteps
 If($PSBoundParameters.ContainsKey('ForceNewModuleData')){
     Write-LogEntry -Message ("Forcing new module data to be downloaded from PowerShell Gallery") -Source $MyInvocation.MyCommand.Name -Severity 1
     $UseExportedModuleData = $false
@@ -3055,7 +3053,7 @@ $i=0
 Foreach($ModuleItem in $ModuleSearchData){
     $i++
     Write-LogEntry -Message ("Searching for module [{0}] using criteria [{1}] in {2}..." -f $ModuleItem.Name,$ModuleItem.ModuleSearch,$SourceLocation) -Source 'Get-ModuleListData' -Severity 1
-    Update-SequenceProgressBar -Runspace $buildSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxStep $ModuleSearchData.Count -Message ("Searching for module [{0}] in the PowerShell Gallery..." -f $ModuleItem.Name)
+    Update-SequenceProgressBar -Runspace $Global:BuildSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxStep $ModuleSearchData.Count -Message ("Searching for module [{0}] in the PowerShell Gallery..." -f $ModuleItem.Name)
     If($UseExportedModuleData){
         $ModuleGroupItems = $MockedModuleData | Where-Object { $_.GroupName -eq $ModuleItem.Name }
         Start-Sleep 1
@@ -3073,7 +3071,7 @@ $AllModuleData | Export-Clixml -Path $ModuleDataPath -Force
 
 # populate solution data
 #=======================================================================================
-Update-SequenceProgressBar -Runspace $buildSequence -ProgressBar 'ProgressBarMain' -Step 6 -MaxStep $totalSteps
+Update-SequenceProgressBar -Runspace $Global:BuildSequence -ProgressBar 'ProgressBarMain' -Step 6 -MaxStep $totalSteps
 
 #determine if we are using preloaded data
 If($PSBoundParameters.ContainsKey('ForceNewSolutionData')){
@@ -3100,7 +3098,7 @@ If(-not $PSBoundParameters.ContainsKey('SkipSolutionData')){
     Foreach($SolutionItem in $SolutionSearchData){
         $i++
         Write-LogEntry -Message ("Searching for module list of module for solution group [{0}] in {1}..." -f $SolutionItem.Name, $SourceLocation) -Source $MyInvocation.MyCommand.Name -Severity 1
-        Update-SequenceProgressBar -Runspace $buildSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxStep $SolutionSearchData.Count -Message ("Searching for module list for solution group [{0}]..." -f $SolutionItem.Name)
+        Update-SequenceProgressBar -Runspace $Global:BuildSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxStep $SolutionSearchData.Count -Message ("Searching for module list for solution group [{0}]..." -f $SolutionItem.Name)
         If($UseExportedSolutionData){
             $SolutionGroupItems = $MockedSolutionData | Where-Object { $_.GroupName -eq $SolutionItem.Name }
             Start-Sleep 1
@@ -3117,11 +3115,11 @@ If(-not $PSBoundParameters.ContainsKey('SkipSolutionData')){
 
 
 Write-LogEntry -Message ("Found [{0}] modules and [{1}] solutions" -f $AllModuleData.Count,$AllSolutionData.Count) -Source $MyInvocation.MyCommand.Name -Severity 1
-Update-SequenceProgressBar -Runspace $buildSequence -ProgressBar 'ProgressBarMain' -Step 7 -MaxStep $totalSteps -Message ("Launching {0} UI..." -f $UIConfig.Title)
+Update-SequenceProgressBar -Runspace $Global:BuildSequence -ProgressBar 'ProgressBarMain' -Step 7 -MaxStep $totalSteps -Message ("Launching {0} UI..." -f $UIConfig.Title)
 Write-LogEntry -Message ("Launching {0} UI..." -f $UIConfig.Title) -Source $MyInvocation.MyCommand.Name -Severity 1
 
 Start-Sleep 3
-Close-SequenceWindow -Runspace $buildSequence
+Close-SequenceWindow -Runspace $Global:BuildSequence
 
 ##=============================================
 ## LAUNCH SELECTOR UI
@@ -3133,10 +3131,10 @@ $Global:UI = Show-UIMainWindow `
                 -Config $UIConfig `
                 -ModuleData $AllModuleData `
                 -SolutionData $AllSolutionData `
-                -InstalledModules $Global:InstalledModules `
+                -InstalledModules $InstalledModules `
                 -LogPath ($LogFilePath -replace "\.log$","_UI.log") `
-                -TopPosition $buildSequence.Window.Top `
-                -LeftPosition $buildSequence.Window.Left `
+                -TopPosition $Global:BuildSequence.Window.Top `
+                -LeftPosition $Global:BuildSequence.Window.Left `
                 -DisableProcessCheck:$DisableProcessKill `
                 -Wait
 
@@ -3159,7 +3157,7 @@ If($Global:UI.OutputData.DoAction -eq $False){
     Write-LogEntry -Message "Starting module install sequence..." -Source $MyInvocation.MyCommand.Name -Severity 1
     #launch Sequence Window
     $Global:installSequence = Show-SequenceWindow -Config $UIConfig -Message "Working on modules, this can take some time..." -TopPosition $Global:UI.Window.Top -LeftPosition $Global:UI.Window.Left
-    Update-SequenceProgressBar -Runspace $installSequence -ProgressBar 'ProgressBarMain' -Indeterminate -Message "Starting module install sequence..."
+    Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarMain' -Indeterminate -Message "Starting module install sequence..."
 }
 <#
 INSTALL SEQUENCE
@@ -3231,10 +3229,10 @@ If($Global:UI.OutputData.AdditionalDownloads){$TotalSteps++}
 
 #you can't have a 1 becuse any step plus DoAction will be 2
 If($TotalSteps -le 1){
-    Update-SequenceProgressBar -Runspace $installSequence -ProgressBar 'ProgressBarMain' -Indeterminate -Message "No action selected. Exiting"
+    Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarMain' -Indeterminate -Message "No action selected. Exiting"
     Write-LogEntry -Message "No action selected. Exiting" -Source $MyInvocation.MyCommand.Name -Severity 2
     Start-Sleep 3
-    Close-SequenceWindow -Runspace $installSequence
+    Close-SequenceWindow -Runspace $Global:installSequence
     Exit 0
 }
 
@@ -3249,13 +3247,13 @@ If($Global:UI.OutputData.RepairSelected)
 {
     $startStep++
     Write-LogEntry -Message ("[{0} of {1}] Repairing selected modules" -f $startStep,$totalSteps) -Source 'Installer' -Severity 0
-    Update-SequenceProgressBar -Runspace $installSequence -ProgressBar 'ProgressBarMain' -Step $startStep -MaxStep $totalSteps
+    Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarMain' -Step $startStep -MaxStep $totalSteps
     #Repair selected modules
     $i=0
     foreach($RepairModule in $Global:UI.OutputData.SelectedModules)
     {
         $i++
-        Update-SequenceProgressBar -Runspace $installSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxStep $Global:UI.OutputData.SelectedModules.Count -Message "Repairing module [$($RepairModule.Name)]"
+        Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxStep $Global:UI.OutputData.SelectedModules.Count -Message "Repairing module [$($RepairModule.Name)]"
         Write-LogEntry -Message ("Repairing module [{0}]" -f $RepairModule.Name) -Source 'Installer' -Severity 0
         try {
             Get-Module -Name $RepairModule.Name -ListAvailable | Remove-Module -Force -ErrorAction Stop
@@ -3276,7 +3274,7 @@ If($Global:UI.OutputData.RemoveAll)
 {
     $startStep++
     Write-LogEntry -Message ("[{0} of {1}] Removing all modules (except selected)" -f $startStep,$totalSteps) -Source 'Installer' -Severity 0
-    Update-SequenceProgressBar -Runspace $installSequence -ProgressBar 'ProgressBarMain' -Step $startStep -MaxStep $totalSteps
+    Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarMain' -Step $startStep -MaxStep $totalSteps
     #remove all modules
     $i=0
     $maxCount = $Global:UI.InstalledModules.count
@@ -3284,7 +3282,7 @@ If($Global:UI.OutputData.RemoveAll)
     Foreach($RemoveModule in $Global:UI.InstalledModules)
     {
         $i++
-        Update-SequenceProgressBar -Runspace $installSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxStep $maxCount -Message "Removing module [$($RemoveModule.Name)]"
+        Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxStep $maxCount -Message "Removing module [$($RemoveModule.Name)]"
         If($Global:UI.OutputData.SelectedModules -contains $RemoveModule.Name){
             Write-LogEntry -Message ("Module [{0}] was selected, skipping removal" -f $RemoveModule.Name) -Source 'Installer' -Severity 0
         }Else{
@@ -3309,13 +3307,13 @@ If($Global:UI.OutputData.AutoUpdate)
     $startStep++
     #update all modules
     Write-LogEntry -Message ("[{0} of {1}] Updating all modules" -f $startStep,$totalSteps) -Source 'Installer' -Severity 0
-    Update-SequenceProgressBar -Runspace $installSequence -ProgressBar 'ProgressBarMain' -Step $startStep -MaxStep $totalSteps
+    Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarMain' -Step $startStep -MaxStep $totalSteps
     #TODO: Update all modules
     $i=0
     Foreach($ModuleUpdate in $Global:UI.InstalledModules)
     {
         $i++
-        Update-SequenceProgressBar -Runspace $installSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxStep $Global:UI.InstalledModules.Count -Message "Updating module [$($ModuleUpdate.Name)]"
+        Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxStep $Global:UI.InstalledModules.Count -Message "Updating module [$($ModuleUpdate.Name)]"
 
         try {
             #install module if it was removed
@@ -3341,13 +3339,13 @@ If($Global:UI.OutputData.DuplicateCleanup)
     $startStep++
     #Remove duplicate modules
     Write-LogEntry -Message ("[{0} of {1}] Cleaning up old modules" -f $startStep,$totalSteps) -Source 'Installer' -Severity 0
-    Update-SequenceProgressBar -Runspace $installSequence -ProgressBar 'ProgressBarMain' -Step $startStep -MaxStep $totalSteps
+    Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarMain' -Step $startStep -MaxStep $totalSteps
     #TODO: Remove duplicate modules. Check if each list has update available are any old versions of modules and remove them.
     $i=0
     Foreach($ModuleItem in $Global:UI.InstalledModules)
     {
         $i++
-        Update-SequenceProgressBar -Runspace $installSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxStep $Global:UI.InstalledModules.Count -Message "Cleaning up module [$($ModuleItem.Name)]"
+        Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxStep $Global:UI.InstalledModules.Count -Message "Cleaning up module [$($ModuleItem.Name)]"
         Write-LogEntry -Message ("Cleaning up module [{0}]" -f $ModuleItem.Name) -Source 'Installer' -Severity 0
 
         #get all versions of module
@@ -3378,14 +3376,14 @@ If($Global:UI.OutputData.DuplicateCleanup)
 If($Global:UI.OutputData.SelectedModules.count -gt 0)
 {
     $startStep++
-    Update-SequenceProgressBar -Runspace $installSequence -ProgressBar 'ProgressBarMain' -Step $startStep -MaxStep $totalSteps
+    Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarMain' -Step $startStep -MaxStep $totalSteps
     Write-LogEntry -Message ("Installing {0} selected modules" -f $Global:UI.OutputData.SelectedModules.count) -Source 'Installer' -Severity 0
     #TODO: Install selected modules
     $i=0
     Foreach($SelectedModule in $Global:UI.OutputData.SelectedModules)
     {
         $i++
-        Update-SequenceProgressBar -Runspace $installSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxSteps $Global:UI.OutputData.SelectedModules.Count -Message ("Installing module [{0}]" -f $SelectedModule)
+        Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxSteps $Global:UI.OutputData.SelectedModules.Count -Message ("Installing module [{0}]" -f $SelectedModule)
         Write-LogEntry -Message ("Installing module [{0}]" -f $SelectedModule) -Source 'Installer' -Severity 0
 
         #install under user context
@@ -3457,7 +3455,7 @@ If($Global:UI.OutputData.AdditionalDownloads)
     $startStep++
     #additional downloads
     Write-LogEntry -Message ("[{0} of {1}] Processing additional downloads" -f $startStep,$totalSteps) -Source 'Installer' -Severity 0
-    Update-SequenceProgressBar -Runspace $installSequence -ProgressBar 'ProgressBarMain' -Step $startStep -MaxStep $totalSteps
+    Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarMain' -Step $startStep -MaxStep $totalSteps
     Foreach($DownloadID in $Global:UI.OutputData.AdditionalDownloads)
     {
         $i++
@@ -3467,7 +3465,7 @@ If($Global:UI.OutputData.AdditionalDownloads)
             Write-LogEntry -Message ("Download item [{0}] not found" -f $DownloadID) -Source 'Installer' -Severity 3
             Continue
         }
-        Update-SequenceProgressBar -Runspace $installSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxSteps $Global:UI.OutputData.AdditionalDownloads.count -Message ("Installing [{0}]..." -f $DownloadItem.DownloadName)
+        Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxSteps $Global:UI.OutputData.AdditionalDownloads.count -Message ("Installing [{0}]..." -f $DownloadItem.DownloadName)
         Write-LogEntry -Message ("Downloading [{0}] from [{1}]" -f $DownloadItem.DownloadName,$DownloadItem.DownloadUrl) -Source 'Installer' -Severity 0
         #DO ACTION
 
@@ -3516,11 +3514,11 @@ If($Global:UI.OutputData.AdditionalDownloads)
 If($SimulateInstall){
     $WhatIfPreference = $false
 }
-Update-SequenceProgressBar -Runspace $installSequence -ProgressBar 'ProgressBarMain' -PercentComplete 100 -Message "Install steps complete, Exiting..."
-Update-SequenceProgressBar -Runspace $installSequence -ProgressBar 'ProgressBarSub' -PercentComplete 100 -Message "Install steps complete, Exiting..."
+Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarMain' -PercentComplete 100 -Message "Install steps complete, Exiting..."
+Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarSub' -PercentComplete 100 -Message "Install steps complete, Exiting..."
 Write-LogEntry -Message "Installation complete" -Source $MyInvocation.MyCommand.Name -Severity 1
 Start-Sleep 5
-Close-SequenceWindow -Runspace $installSequence
+Close-SequenceWindow -Runspace $Global:installSequence
 
 #Tag for detection of completion
 #=======================================================================================

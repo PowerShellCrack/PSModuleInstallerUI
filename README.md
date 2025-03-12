@@ -110,3 +110,14 @@ Here are some screenshots of the PSModuleInstallerUI:
 ![Progress](.images/install_bar.jpg)
 
 ![Progress](.images/powershell_output.jpg)
+
+
+## Troubleshoting
+
+There are three global variables that can be used to identify UI issues. 
+
+- $Global:UI.Error
+- $Global:BuildSequence.Error
+- $Global:InstallSequence.Error
+
+If you have any issues, please submit them. 
