@@ -44,7 +44,17 @@ For Detection (update variables in script)
 
 ## Why use this?
 
-This UI is designed for encironments that want to "control" what modules are avaialbe to dowload. It also provides a easy means of updating modules 
+This UI is designed for environments that want to "control" what modules are available to download. It also provides an easy means of updating modules.
+
+### Intune Managed Installer
+
+Using Intune Managed Installer with this UI, you can ensure that only approved PowerShell modules are installed on your devices. This helps maintain a secure and compliant environment by preventing unauthorized modules from being installed. The UI allows you to manage and update these modules easily, ensuring that your devices always have the latest approved versions.
+
+### Windows Defender Application Control (WDAC)
+
+Windows Defender Application Control (WDAC) helps protect your devices by allowing only trusted applications to run. By using this UI in conjunction with WDAC, you can control which PowerShell modules are allowed to run on your devices. This adds an extra layer of security by ensuring that only approved modules are executed, reducing the risk of running malicious or untrusted code.
+
+By integrating this UI with Intune Managed Installer and WDAC, you can create a robust and secure environment for managing PowerShell modules, ensuring compliance and reducing the risk of security threats. This integration also ensures that the modules will run correctly on the device, providing a reliable and consistent experience for users.
 
 ## Parameters
 
