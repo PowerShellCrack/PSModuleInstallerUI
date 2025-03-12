@@ -1647,7 +1647,7 @@ Function Show-UIMainWindow
         #action for exit button
         $syncHash.btnInstall.Add_Click({
             $syncHash.btnInstall.IsEnabled = $false
-            If( ([Boolean]::Parse($syncHash.Config.DefaultSettings.IgnorePoshProcessCheck)) -or ($syncHash.DisableProcessCheck) ){
+            If( ([Boolean]::Parse($syncHash.Config.DefaultSettings.SkipPoshProcessCheck)) -or ($syncHash.DisableProcessCheck) ){
                 $result = $true
             }Else{
                 $result = Confirm-RunningApps

@@ -9,7 +9,7 @@
         "AllowUserContextInstall": "True",
         "InstallMode": "CurrentUser",
         "UseExternalInstaller": "True",
-        "IgnorePoshProcessCheck": "False"
+        "SkipPoshProcessCheck": "False"
     },
 
     "ModuleGroups": [
