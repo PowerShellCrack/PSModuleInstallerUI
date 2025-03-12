@@ -7,4 +7,4 @@
 /Logs/*
 
 *.test.xml
-tests.ps1
+*.tests.ps1
