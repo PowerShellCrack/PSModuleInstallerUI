@@ -8,7 +8,8 @@
         "RemoveAllModulesFirst": "False",
         "AllowUserContextInstall": "True",
         "InstallMode": "CurrentUser",
-        "UseExternalInstaller": "True"
+        "UseExternalInstaller": "True",
+        "IgnorePoshProcessCheck": "False"
     },
 
     "ModuleGroups": [

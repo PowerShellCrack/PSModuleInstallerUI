@@ -35,13 +35,13 @@ PS> .\PowerShellModuleInstallerUI2.ps1 -SolutionDataPath "C:\ProgramData\Company
 
 The script accepts the following parameters:
 
-- `-ForceNewModuleData` [switch]: Forces the creation of new module data.
-- `-ForceNewSolutionData` [switch]: Forces the creation of new solution data.
 - `-StoredDataPath` [string]: Specifies the path where data is stored.
-- `-SkipSolutionData` [switch]: Skips the processing of solution data.
-- `-SimulateInstall` [switch]: Simulates the installation process without making any changes.
 - `-TagDetectionPath` [string]: Specifies the path for tag detection, default is `"$env:ALLUSERSPROFILE\Company"`.
 - `-LogFilePath` [string]: Specifies the path for the log file.
+- `-ForceNewModuleData` [switch]: Forces the creation of new module data.
+- `-ForceNewSolutionData` [switch]: Forces the creation of new solution data.
+- `-SkipSolutionData` [switch]: Skips the processing of solution data.
+- `-SimulateInstall` [switch]: Simulates the installation process without making any changes.
 
 ## UIConfig
 
@@ -58,6 +58,7 @@ This section determines the default settings for the UI:
 - `AllowUserContextInstall`: Allows installation in the user context (True/False).
 - `InstallMode`: Specifies the installation mode (e.g., CurrentUser).
 - `UseExternalInstaller`: Uses an external installer if available (True/False).
+- `IgnorePoshProcessCheck`: Ignore any processes identified to use powershell modules (eg: code, ise, powershell, pwsh) (True/False).
 
 ### ModuleGroups
 

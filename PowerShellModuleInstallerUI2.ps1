@@ -14,13 +14,13 @@
 
 [CmdletBinding()]
 param(
+    [string]$StoredDataPath,
+    [string]$TagDetectionPath,
+    [string]$LogFilePath, 
     [switch]$ForceNewModuleData,
     [switch]$ForceNewSolutionData,
-    [string]$StoredDataPath,
     [switch]$SkipSolutionData,
-    [switch]$SimulateInstall,
-    [string]$TagDetectionPath,
-    [string]$LogFilePath
+    [switch]$SimulateInstall
 )
 
 
@@ -90,7 +90,7 @@ Function Show-SequenceWindow {
 
         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="1366" Background="LightBlue" Opacity="80" Height="145">
             <TextBox x:Name="txtMessage" HorizontalAlignment="Center" HorizontalContentAlignment="Center" IsEnabled="False" BorderThickness="0" FontSize="26" FontWeight="Bold" Background="Transparent" Text="Please Wait..." TextWrapping="NoWrap" />
-            <ProgressBar x:Name="ProgressBarMain" Width="630" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5" />
+            <ProgressBar x:Name="ProgressBarMain" Width="630" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5" IsIndeterminate="True" />
             <ProgressBar x:Name="ProgressBarSub" Width="630" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5" />
             <TextBox x:Name="txtStatus" HorizontalAlignment="Center" Height="55" Width="630" IsEnabled="False" BorderThickness="0" Background="Transparent" FontSize="18" Text="Loading..." TextWrapping="Wrap"/>
 
@@ -116,7 +116,7 @@ Function Show-SequenceWindow {
 
         # INNER  FUNCTIONS
         #Closes UI objects and exits (within runspace)
-        Function Close-Sequencer
+        Function Close-UISequenceWindow
         {
             if ($syncHash.hadCritError) { Write-Host -Message "Background thread had a critical error" -ForegroundColor red }
             #if runspace has not errored Dispose the UI
@@ -131,7 +131,7 @@ Function Show-SequenceWindow {
 
         #Add smooth closing for Window
         $syncHash.Window.Add_Loaded({ $syncHash.isLoaded = $True })
-    	$syncHash.Window.Add_Closing({ $syncHash.isClosing = $True; Close-SequenceWindow })
+    	$syncHash.Window.Add_Closing({ $syncHash.isClosing = $True; Close-UISequenceWindow })
     	$syncHash.Window.Add_Closed({ $syncHash.isClosed = $True })
 
         #always force windows on bottom
@@ -152,7 +152,7 @@ Function Show-SequenceWindow {
 
         #action for exit button
         $syncHash.btnExit.Add_Click({
-            Close-Sequencer
+            Close-UISequenceWindow
         })
 
         $syncHash.Window.ShowDialog()
@@ -226,8 +226,8 @@ function Update-SequenceProgressBar
         [parameter(Mandatory=$true, ParameterSetName="indeterminate")]
         [switch]$Indeterminate,
         [String]$Message = $Null,
-        [ValidateSet("LightGreen", "Yellow", "Red", "Blue")]
-        [string]$Color = 'LightGreen'
+        [ValidateSet("LightGreen","Yellow","Red","Blue","Green","Black")]
+        [string]$Color = 'Green'
     )
 
     [string]${CmdletName} = $MyInvocation.MyCommand
@@ -258,7 +258,7 @@ function Update-SequenceProgressBar
                 $Runspace.txtPercentage.Text = ' '
 
                 $Runspace.txtStatus.Text = $Message
-            },'Normal')
+            }.GetNewClosure())
 
         }
         else
@@ -266,7 +266,7 @@ function Update-SequenceProgressBar
             if(($PercentComplete -gt 0) -and ($PercentComplete -lt 100))
             {
                 If($Timespan -gt 1){
-                    $Runspace.$ProgressBar.Dispatcher.Invoke([action]{
+                    $Runspace.Window.Dispatcher.Invoke([action]{
                         $t=1
                         #Determine the incement to go by based on timespan and difference
                         Do{
@@ -286,11 +286,11 @@ function Update-SequenceProgressBar
                             Start-Sleep 1
 
                         } Until ($IncrementTo -ge $PercentComplete -or $t -gt $Timespan)
-                    },'Normal')
+                    }.GetNewClosure())
                 }
                 Else{
                    Write-Verbose ("{0}: Setting [{3}]  to {1}% with status: {2}" -f ${CmdletName},$PercentComplete,$Message,$ProgressBar)
-                    $Runspace.$ProgressBar.Dispatcher.Invoke([action]{
+                    $Runspace.Window.Dispatcher.Invoke([action]{
 
                         $Runspace.$ProgressBar.Visibility = 'Visible'
                         $Runspace.$ProgressBar.IsIndeterminate = $False
@@ -307,7 +307,7 @@ function Update-SequenceProgressBar
             elseif($PercentComplete -eq 100)
             {
                Write-Verbose ("{0}: Setting [{2}] to complete with status: {1}" -f ${CmdletName},$Message,$ProgressBar)
-                $Runspace.$ProgressBar.Dispatcher.Invoke([action]{
+                $Runspace.Window.Dispatcher.Invoke([action]{
 
                         $Runspace.$ProgressBar.Visibility = 'Visible'
                         $Runspace.$ProgressBar.IsIndeterminate = $False
@@ -318,7 +318,7 @@ function Update-SequenceProgressBar
                         $Runspace.txtPercentage.Text = ('' + $PercentComplete + '%')
 
                         $Runspace.txtStatus.Text = $Message
-                },'Normal')
+                }.GetNewClosure())
             }
             else{
                 Write-Verbose ("{0}: [{1}] is out of range" -f ${CmdletName},$ProgressBar)
@@ -351,6 +351,7 @@ Function Show-UIMainWindow
         [string]$Theme,
         $TopPosition,
         $LeftPosition,
+        [switch]$DisableProcessCheck,
         [switch]$Wait
     )
     <#
@@ -373,6 +374,7 @@ Function Show-UIMainWindow
     $syncHash.LeftPosition = $LeftPosition
     $syncHash.ModuleData = $ModuleData
     $syncHash.InstalledModules = $InstalledModules
+    $syncHash.DisableProcessCheck = $DisableProcessCheck
     $syncHash.SolutionData = $SolutionData
     $syncHash.ModuleList = @()
     $syncHash.OutputData = @{}
@@ -1110,56 +1112,6 @@ Function Show-UIMainWindow
             if (!($syncHash.isClosing)) { $syncHash.Window.Close() | Out-Null }
         }
 
-        Function Update-UIProgressBar{
-            [CmdletBinding()]
-            param(
-                [Parameter(Mandatory = $False, ParameterSetName="Progress")]
-                [int]$Step,
-                [Parameter(Mandatory = $true, ParameterSetName="Progress")]
-                [int]$MaxStep,
-                [Parameter(Mandatory = $False)]
-                [string]$Message,
-                [Parameter(Mandatory = $false, ParameterSetName="Indeterminate")]
-                [switch]$Indeterminate,
-                [ValidateSet('LightGreen','Yellow','Red')]
-                [string]$Color = "LightGreen"
-            )
-
-            if($PSBoundParameters['Indeterminate']){
-                 $syncHash.ProgressBar.Dispatcher.Invoke("Normal",[action]{
-                        $syncHash.ProgressBar.IsIndeterminate = $True
-                        $syncHash.ProgressBar.Foreground = $Color
-                        $syncHash.txtPercentage.Text = ' '
-                        If($Message){
-                            $syncHash.txtStatus.Visibility = 'Visible'
-                            $syncHash.txtStatus.Text = $Message
-                        }Else{
-                            $syncHash.txtStatus.Visibility = 'Hidden'
-                        }
-                })
-            }
-            else{
-                $Percentage = [math]::Round((($Step / $MaxStep) * 100),0 )
-                if(($Percentage -ge 0) -and ($Percentage -le 100)){
-                    $syncHash.ProgressBar.Dispatcher.Invoke("Normal",[action]{
-                            $syncHash.ProgressBar.IsIndeterminate = $False
-                            $syncHash.ProgressBar.Value = $Percentage
-                            $syncHash.ProgressBar.Foreground = $Color
-                            $syncHash.txtPercentage.Text = ('' + $Percentage +'%')
-                            If($Message){
-                                $syncHash.txtStatus.Visibility = 'Visible'
-                                $syncHash.txtStatus.Text = $Message
-                            }Else{
-                                $syncHash.txtStatus.Visibility = 'Hidden'
-                            }
-                    })
-                }
-                else{
-                    Write-Warning "Out of range"
-                }
-            }
-        }
-
         Function Update-UIListView{
             [CmdletBinding()]
             param(
@@ -1664,7 +1616,13 @@ Function Show-UIMainWindow
         $syncHash.chkModuleRemoveAll.Add_Checked({
             If($syncHash.chkModuleRemoveAll.IsChecked){
                 $syncHash.chkModuleRepairSelected.IsChecked = $false
+                If( -not($syncHash.chkModuleRemoveDuplicates.IsChecked) -and -not($syncHash.chkModuleAutoUpdate.IsChecked) -and ($mainListBox.Items.Count -gt 0) ){
+                    $syncHash.btnInstall.Content = "Remove Selected Modules"
+                }ElseIf($mainListBox.Items.Count -gt 0){
+                    $syncHash.btnInstall.Content = "Install Selected Modules"
+                }
             }
+            
         }.GetNewClosure())
 
         #if remove duplicates is checked, unchecked conflicting buttons
@@ -1689,7 +1647,12 @@ Function Show-UIMainWindow
         #action for exit button
         $syncHash.btnInstall.Add_Click({
             $syncHash.btnInstall.IsEnabled = $false
-            $result = Confirm-RunningApps
+            If( ([Boolean]::Parse($syncHash.Config.DefaultSettings.IgnorePoshProcessCheck)) -or ($syncHash.DisableProcessCheck) ){
+                $result = $true
+            }Else{
+                $result = Confirm-RunningApps
+            }
+           
             If($result){
                 #Build OutputData OBJECT for external installer or Sequence Window
                 $syncHash.OutputData = @{
@@ -2939,10 +2902,6 @@ If(Test-Path $scriptFullPath -PathType Leaf ){
     [string]$scriptName = 'PowerShellGalleryModuleInstaller'
 }
 
-
-$ConfigFilePath = "$scriptPath\UIConfig.json"
-$UIConfig = Get-Content $ConfigFilePath | ConvertFrom-Json
-
 $FileName = "$($scriptName)_$(Get-Date -Format 'yyyy-MM-dd_Thh-mm-ss-tt').log"
 #build global log fullpath
 If($LogFilePath){
@@ -2951,6 +2910,10 @@ If($LogFilePath){
     $LogFilePath = Join-Path "$scriptPath\Logs" -ChildPath $FileName
 }
 Write-Host "logging to file: $LogFilePath" -ForegroundColor Cyan
+
+$ConfigFilePath = "$scriptPath\UIConfig.json"
+$UIConfig = Get-Content $ConfigFilePath | ConvertFrom-Json
+Write-LogEntry -Message "Loading UI Config file: $ConfigFilePath" -Source $MyInvocation.MyCommand.Name -Severity 1
 
 $CurrentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 
@@ -2964,6 +2927,14 @@ If($StoredDataPath){
     Write-LogEntry -Message "Using default data path: $scriptPath" -Source $MyInvocation.MyCommand.Name -Severity 1
     $ModuleDataPath = "$scriptPath\ExportedModuleData.xml"
     $SolutionDataPath = "$scriptPath\ExportedSolutionData.xml"
+}
+
+#code can't be killed as it can have many processes running
+If(Test-VSCode){
+    Write-LogEntry -Message "Running in VS code, disabling process check" -Source $MyInvocation.MyCommand.Name -Severity 2
+    $DisableProcessKill = $true
+}else{
+    $DisableProcessKill = $false
 }
 
 #build array
@@ -3156,16 +3127,17 @@ Close-SequenceWindow -Runspace $buildSequence
 ##=============================================
 Write-Host "Loading UI, please wait..." -ForegroundColor White
 $Global:UI = Show-UIMainWindow `
-                        -TabContents $TabControlXaml `
-                        -TabElements $TabItemData `
-                        -Config $UIConfig `
-                        -ModuleData $AllModuleData `
-                        -SolutionData $AllSolutionData `
-                        -InstalledModules $Global:InstalledModules `
-                        -LogPath ($LogFilePath -replace "\.log$","_UI.log") `
-                        -TopPosition $buildSequence.Window.Top `
-                        -LeftPosition $buildSequence.Window.Left `
-                        -Wait
+                -TabContents $TabControlXaml `
+                -TabElements $TabItemData `
+                -Config $UIConfig `
+                -ModuleData $AllModuleData `
+                -SolutionData $AllSolutionData `
+                -InstalledModules $Global:InstalledModules `
+                -LogPath ($LogFilePath -replace "\.log$","_UI.log") `
+                -TopPosition $buildSequence.Window.Top `
+                -LeftPosition $buildSequence.Window.Left `
+                -DisableProcessCheck:$DisableProcessKill `
+                -Wait
 
 
 # after the UI is closed, check for outputdata to do work
@@ -3185,7 +3157,8 @@ If($Global:UI.OutputData.DoAction -eq $False){
 }Else{
     Write-LogEntry -Message "Starting module install sequence..." -Source $MyInvocation.MyCommand.Name -Severity 1
     #launch Sequence Window
-    $installSequence = Show-SequenceWindow -Config $UIConfig -Message "Working on modules, this can take some time..." -TopPosition $Global:UI.Window.Top -LeftPosition $Global:UI.Window.Left
+    $Global:installSequence = Show-SequenceWindow -Config $UIConfig -Message "Working on modules, this can take some time..." -TopPosition $Global:UI.Window.Top -LeftPosition $Global:UI.Window.Left
+    Update-SequenceProgressBar -Runspace $installSequence -ProgressBar 'ProgressBarMain' -Indeterminate -Message "Starting module install sequence..."
 }
 <#
 INSTALL SEQUENCE
@@ -3264,7 +3237,7 @@ If($TotalSteps -le 1){
     Exit 0
 }
 
-Update-SequenceProgressBar -Runspace $installSequence -ProgressBar 'ProgressBarMain' -Indeterminate -Message "Starting module install sequence..."
+
 Write-LogEntry -Message ("Starting module install sequence...") -Source $MyInvocation.MyCommand.Name -Severity 1
 
 Start-Sleep 2
@@ -3542,8 +3515,8 @@ If($Global:UI.OutputData.AdditionalDownloads)
 If($SimulateInstall){
     $WhatIfPreference = $false
 }
-Update-SequenceProgressBar -Runspace $installSequence -ProgressBar 'ProgressBarMain' -Step $totalSteps -MaxStep $totalSteps
-Update-SequenceProgressBar -Runspace $installSequence -ProgressBar 'ProgressBarSub' -Indeterminate -Message "Installation complete, Exiting..."
+Update-SequenceProgressBar -Runspace $installSequence -ProgressBar 'ProgressBarMain' -PercentComplete 100 -Message "Install steps complete, Exiting..."
+Update-SequenceProgressBar -Runspace $installSequence -ProgressBar 'ProgressBarSub' -PercentComplete 100 -Message "Install steps complete, Exiting..."
 Write-LogEntry -Message "Installation complete" -Source $MyInvocation.MyCommand.Name -Severity 1
 Start-Sleep 5
 Close-SequenceWindow -Runspace $installSequence
