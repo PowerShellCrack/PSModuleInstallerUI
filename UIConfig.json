@@ -1,0 +1,184 @@
+{
+    "Title": "PowerShell Module Installer",
+    "Version": "2.3.0",
+    "DefaultSettings": {
+        "PowerShellVersion": "5.1",
+        "AutoUpdate": "True",
+        "RemoveDuplicates": "True",
+        "RemoveAllModulesFirst": "False",
+        "AllowUserContextInstall": "True",
+        "InstallMode": "CurrentUser",
+        "UseExternalInstaller": "True"
+    },
+
+    "ModuleGroups": [
+        {
+            "Name": "Azure",
+            "Description": "Microsoft Azure PowerShell - Cmdlets to manage resources in Azure",
+            "PowerShellVersionSupport": ["5.1","7.*"],
+            "ModuleSearch": "Az.*",
+            "ModuleAuthors": ["Microsoft Corporation"],
+            "ModuleVersion": [],
+            "IncludePrereleaseVersion": "False",
+            "ShowBetaTab": "False",
+            "IncludedModules": [],
+            "ExcludedModules": []
+        },
+        {
+            "Name": "Microsoft Entra",
+            "Description": "Microsoft Entra PowerShell v1.0: Microsoft Entra PowerShell is a scenario-driven module that allows administrators to efficiently manage Entra ID resources, including users, groups, applications, and policies, among others",
+            "PowerShellVersionSupport": ["5.1","7.*"],
+            "ModuleSearch": "Microsoft.Entra.*",
+            "ModuleAuthors": ["Microsoft"],
+            "ModuleVersion": [],
+            "IncludePrereleaseVersion": "False",
+            "ShowBetaTab": "True",
+            "IncludedModules": [],
+            "ExcludedModules": []
+        },
+        {
+            "Name": "Microsoft Graph",
+            "Description": "Microsoft Graph PowerShell v1.0 module - Cmdlets to interact with Microsoft Graph",
+            "PowerShellVersionSupport": ["5.1","7.*"],
+            "ModuleSearch": "Microsoft.Graph.*",
+            "ModuleAuthors": ["Microsoft Corporation","Microsoft"],
+            "ModuleVersion": [],
+            "IncludePrereleaseVersion": "False",
+            "ShowBetaTab": "True",
+            "IncludedModules": [],
+            "ExcludedModules": []
+        },
+        {
+            "Name": "Exchange Online",
+            "Description": "This is a General Availability (GA) release of the Exchange Online Powershell V3 module. Exchange Online cmdlets in this module are REST-backed and do not require Basic Authentication to be enabled in WinRM",
+            "PowerShellVersionSupport": ["5.1","7.*"],
+            "ModuleSearch": "ExchangeOnlineManagement",
+            "ModuleAuthors": ["Microsoft Corporation"],
+            "ModuleVersion": [],
+            "IncludePrereleaseVersion": "False",
+            "ShowBetaTab": "False",
+            "IncludedModules": [],
+            "ExcludedModules": []
+        },
+        {
+            "Name": "SharePoint Online",
+            "Description": "Microsoft SharePoint Online Services Module for Windows PowerShell",
+            "PowerShellVersionSupport": ["5.1","7.*"],
+            "ModuleSearch": "*SharePoint*",
+            "ModuleAuthors": ["Microsoft Corporation"],
+            "ModuleVersion": [],
+            "IncludePrereleaseVersion": "False",
+            "ShowBetaTab": "False",
+            "IncludedModules": [],
+            "ExcludedModules": []
+        },
+        {
+            "Name": "Teams",
+            "Description": "Microsoft Teams cmdlets module for Windows PowerShell and PowerShell Core",
+            "PowerShellVersionSupport": ["5.1","7.*"],
+            "ModuleAuthors": ["Microsoft Corporation"],
+            "ModuleSearch": "MicrosoftTeams*",
+            "ModuleVersion": [],
+            "IncludePrereleaseVersion": "False",
+            "ShowBetaTab": "False",
+            "IncludedModules": [],
+            "ExcludedModules": []
+        },
+        {
+            "Name": "PnP PowerShell",
+            "Description": "Microsoft 365 Patterns and Practices PowerShell Cmdlets",
+            "PowerShellVersionSupport": ["5.1","7.*"],
+            "ModuleSearch": "*PnP*",
+            "ModuleAuthors": ["Microsoft 365 Patterns and Practices"],
+            "ModuleVersion": [],
+            "IncludePrereleaseVersion": "False",
+            "ShowBetaTab": "False",
+            "IncludedModules": [],
+            "ExcludedModules": []
+        },
+        {
+            "Name": "Microsoft PowerApps",
+            "Description": "PowerShell interface for Microsoft PowerApps and Flow Administrative features",
+            "ModuleSearch": "*PowerApps*",
+            "ModuleAuthors": ["Microsoft Common Data Service Team"],
+            "ModuleVersion": [],
+            "IncludePrereleaseVersion": "False",
+            "ShowBetaTab": "False",
+            "IncludedModules": [],
+            "ExcludedModules": []
+        },
+        {
+            "Name": "Microsoft Powershell",
+            "Description": "PowerShell modules from Microsoft",
+            "ModuleSearch": "Microsoft.PowerShell.*",
+            "ModuleAuthors": ["Microsoft Corporation","Microsoft"],
+            "ModuleVersion": [],
+            "IncludePrereleaseVersion": "False",
+            "ShowBetaTab": "False",
+            "IncludedModules": [],
+            "ExcludedModules": []
+        }
+    ],
+
+    "SolutionGroupedModules": [
+        {
+            "Name": "ScubaGear",
+            "ModulesListUrl": "https://raw.githubusercontent.com/cisagov/ScubaGear/refs/heads/1380-permissions-file-integration/PowerShell/ScubaGear/Modules/Permissions/ScubaGearPermissions.json",
+            "ModulesQuery": "$ModulesListUrl | Where scubaGearProduct -ne 'ScubaTank' | Select-Object -ExpandProperty poshModule -Unique",
+            "Description": "ScubaGear is for M365 administrators who want to assess their tenant environments against CISA Secure Configuration Baselines.",
+            "PowerShellVersionSupport": ["5.1"],
+            "IncludedModules": [
+                {"ModuleName" : "ScubaGear","ModuleVersion" : "1.5.0","ModuleAuthors" : "CISA"}
+            ],
+            "ExcludedModules": [],
+            "AdditionalDownloads": [
+                {
+                    "Name": "Open Policy Agent",
+                    "Type": "File",
+                    "Required:": "true",
+                    "OnlineDownload": "true",
+                    "DownloadUrl": "https://openpolicyagent.org/downloads/v0.70.0/opa_windows_amd64.exe",
+                    "DestinationPath": "$env:UserProfile\\.scubagear\\Tools",
+                    "InstallArgument": "",
+                    "Description": "open source, general-purpose policy engine that unifies policy enforcement across the stack"
+                }
+            ]
+        },
+        {
+            "Name": "PAW-CSM",
+            "Description": "PAW-CSM is a PowerShell module that provides a set of cmdlets to manage PAW (Privileged Access Workstation) configurations for Azure and Intune.",
+            "IncludedModules": [
+                {"ModuleName": "Microsoft.Graph.Authentication","ModuleVersion": "2.15.0"},
+                {"ModuleName": "Microsoft.Graph.Identity.DirectoryManagement", "ModuleVersion": "2.15.0"},
+                {"ModuleName": "Microsoft.Graph.Users", "ModuleVersion": "2.15.0"},
+                {"ModuleName": "Microsoft.Graph.Groups", "ModuleVersion": "2.15.0"},
+                {"ModuleName": "Microsoft.Graph.Identity.SignIns", "ModuleVersion": "2.15.0"},
+                {"ModuleName": "Microsoft.Graph.Identity.Governance", "ModuleVersion": "2.15.0"}
+            ],
+            "ExcludedModules": [],
+            "AdditionalDownloads": [
+                {
+                    "Name": "App Control Policy Wizard",
+                    "Type": "msix",
+                    "OnlineDownload": "true",
+                    "Required:": "false",
+                    "DownloadUrl": "https://webapp-wdac-wizard.azurewebsites.net/packages/WDACWizard_2.5.0.1_x64_8wekyb3d8bbwe.MSIX",
+                    "DestinationPath": "{Temp}\\Downloads",
+                    "Description": "The Microsoft App Control Wizard (Version 2.5.0.1) enables IT and security professionals to build and edit Application Control for Business (formerly WDAC) policies by providing an easy to use interface."
+                }
+            ]
+        },
+        {
+            "Name": "Microsoft365DSC",
+            "Description": "Microsoft365DSC is a PowerShell module that provides a set of cmdlets to manage Microsoft 365 configurations.",
+            "IncludedModules": [
+                {"ModuleName": "Microsoft.Graph.Authentication","ModuleVersion": ""},
+                {"ModuleName": "ExchangeOnlineManagement", "ModuleVersion": ""},
+                {"ModuleName": "PnP.PowerShell", "ModuleVersion": ""},
+                {"ModuleName": "Microsoft.PowerApps.Administration.PowerShell", "ModuleVersion": ""},
+                {"ModuleName": "MicrosoftTeams", "ModuleVersion": ""}
+            ],
+            "ExcludedModules": []
+        }
+    ]
+}

@@ -1,0 +1,10 @@
+!/.vs/
+/.vs/*
+!/.vscode/
+/.vscode/*
+*.zip
+!/Logs/
+/Logs/*
+
+*.test.xml
+tests.ps1

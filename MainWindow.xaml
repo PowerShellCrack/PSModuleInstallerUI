@@ -1,0 +1,665 @@
+﻿<Window x:Class="PowerShellModuleSelectorUI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PowerShellModuleSelectorUI"
+        mc:Ignorable="d"
+        WindowStartupLocation="CenterScreen"
+        Title="MainWindow" Height="768" Width="1366"
+        ResizeMode="NoResize" WindowStyle="None"
+        BorderBrush="#0071B7"
+        BorderThickness="0.5">
+    <Window.Resources>
+        <ResourceDictionary>
+            <Color x:Key="ControlLightColor">Gray</Color>
+            <Color x:Key="ControlMediumColor">#FF7381F9</Color>
+            <Color x:Key="ControlDarkColor">#FF211AA9</Color>
+            <Color x:Key="BorderLightColor">#FFCCCCCC</Color>
+            <Color x:Key="BorderMediumColor">#FF888888</Color>
+            <Color x:Key="BorderDarkColor">#FF444444</Color>
+
+            <Style x:Key="TabControlLeftSide" TargetType="{x:Type TabControl}">
+                <Setter Property="OverridesDefaultStyle" Value="True" />
+                <Setter Property="SnapsToDevicePixels" Value="True" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type TabControl}">
+                            <Grid KeyboardNavigation.TabNavigation="Local">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Disabled">
+                                            <Storyboard>
+                                                <ColorAnimationUsingKeyFrames Storyboard.TargetName="Border" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)">
+                                                    <EasingColorKeyFrame KeyTime="0" Value="#FFAAAAAA" />
+                                                </ColorAnimationUsingKeyFrames>
+                                            </Storyboard>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                                <ContentPresenter x:Name="PART_SelectedContentHost"
+									  Grid.Column="1"
+									  Margin="0"
+									  ContentSource="SelectedContent" />
+                                <StackPanel x:Name="HeaderPanel"
+								Grid.Row="0"
+								Margin="0,0,4,-1"
+								Panel.ZIndex="1"
+								Background="Transparent"
+								IsItemsHost="True"
+								KeyboardNavigation.TabIndex="1" />
+                                <Border x:Name="Border"
+							Grid.Row="1"
+							BorderThickness="1"
+							CornerRadius="2"
+							KeyboardNavigation.DirectionalNavigation="Contained"
+							KeyboardNavigation.TabIndex="2"
+							KeyboardNavigation.TabNavigation="Local" />
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="WhiteTabItems" TargetType="{x:Type TabItem}">
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type TabItem}">
+
+                            <Grid x:Name="Root">
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="SelectionStates">
+                                        <VisualState x:Name="Unselected" />
+                                        <VisualState x:Name="Selected">
+                                            <Storyboard>
+                                                <ColorAnimationUsingKeyFrames Storyboard.TargetName="Border" Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)">
+                                                    <EasingColorKeyFrame KeyTime="0" Value="#FFF" />
+                                                </ColorAnimationUsingKeyFrames>
+                                            </Storyboard>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <VisualState x:Name="MouseOver" />
+                                        <VisualState x:Name="Disabled" />
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                                <Border x:Name="Border"
+							Margin="0,0,0,0"
+							BorderBrush="#FF1D3245"
+							BorderThickness="0,0,0,0"/>
+                                <TextBlock Margin="12,10,12,10" Text="{TemplateBinding Header}">
+                                    <TextBlock.LayoutTransform>
+                                        <TransformGroup>
+                                            <ScaleTransform />
+                                            <SkewTransform />
+                                            <RotateTransform Angle="0" />
+                                            <TranslateTransform />
+                                        </TransformGroup>
+                                    </TextBlock.LayoutTransform>
+                                </TextBlock>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Border" Property="BorderBrush" Value="Black" />
+                                    <Setter TargetName="Border" Property="Background" Value="lightGray" />
+                                    <Setter Property="Background" Value="Black" />
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Panel.ZIndex" Value="100" />
+                                    <Setter Property="Foreground" Value="Black"/>
+                                    <Setter TargetName="Border" Property="Background" Value="lightGray" />
+                                    <Setter TargetName="Border" Property="BorderThickness" Value="2" />
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="False">
+                                    <Setter Property="Panel.ZIndex" Value="100" />
+                                    <Setter Property="Foreground" Value="#212121"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- TabItem Style -->
+            <Style x:Key="LineTabStyle" TargetType="{x:Type TabItem}" >
+                <!--<Setter Property="Foreground" Value="#FFE6E6E6"/>-->
+                <Setter Property="Template">
+                    <Setter.Value>
+
+                        <ControlTemplate TargetType="{x:Type TabItem}">
+                            <Grid>
+                                <Border
+                                    Name="Border"
+                                    Margin="15"
+                                    Padding="5"
+                                    CornerRadius="0">
+                                    <ContentPresenter Name="ContentSite" VerticalAlignment="Center"
+                                        HorizontalAlignment="Center" ContentSource="Header"
+                                        RecognizesAccessKey="True" />
+                                </Border>
+                            </Grid>
+
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Foreground" Value="#313131" />
+                                    <Setter TargetName="Border" Property="BorderThickness" Value="0,0,0,3" />
+                                    <Setter TargetName="Border" Property="BorderBrush" Value="#4c4c4c" />
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="False">
+                                    <Setter Property="Foreground" Value="Gray" />
+                                    <Setter TargetName="Border" Property="BorderThickness" Value="0,0,0,3" />
+                                    <Setter TargetName="Border" Property="BorderBrush" Value="#4c4c4c" />
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+
+                                    <Setter Property="Foreground" Value="Black" />
+                                    <Setter TargetName="Border" Property="BorderThickness" Value="0,0,0,3" />
+                                    <Setter TargetName="Border" Property="BorderBrush" Value="#4B90CB" />
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="False">
+
+                                    <Setter Property="Foreground" Value="Gray" />
+                                    <Setter TargetName="Border" Property="BorderThickness" Value="0,0,0,3" />
+                                    <Setter TargetName="Border" Property="BorderBrush" Value="White" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+
+            </Style>
+
+            <Style x:Key="DataGridContentCellCentering" TargetType="{x:Type DataGridCell}">
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type DataGridCell}">
+                            <Grid Background="{TemplateBinding Background}">
+                                <ContentPresenter VerticalAlignment="Center" />
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="CleanLineStyle" TargetType="{x:Type Button}">
+                <Setter Property="Foreground" Value="Black" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="SnapsToDevicePixels" Value="True" />
+
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button" >
+
+                            <Border Name="border" 
+                                BorderThickness="1"
+                                Padding="4,2" 
+                                BorderBrush="#A19F9D" 
+                                CornerRadius="1" 
+                                Background="#F3F2F1">
+                                <ContentPresenter HorizontalAlignment="Center" 
+                                                VerticalAlignment="Center" 
+                                                TextBlock.TextAlignment="Center"
+                                                />
+                            </Border>
+
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="border" Property="BorderBrush" Value="#0078D4" />
+                                    <Setter Property="Button.Foreground" Value="#FFE8EDF9" />
+                                </Trigger>
+
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="border" Property="BorderBrush" Value="#106EBE" />
+                                    <Setter Property="Button.Foreground" Value="#FFE8EDF9" />
+                                    <Setter Property="Background" Value="#106EBE" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="border" Property="BorderBrush" Value="#F3F2F1" />
+                                    <Setter Property="Button.Foreground" Value="#A19F9D" />
+                                </Trigger>
+                                <Trigger Property="IsFocused" Value="False">
+                                    <Setter TargetName="border" Property="BorderBrush" Value="#A19F9D" />
+                                    <Setter Property="Button.Background" Value="#336891" />
+                                </Trigger>
+
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="CheckRadioFocusVisual">
+                <Setter Property="Control.Template">
+                    <Setter.Value>
+                        <ControlTemplate>
+                            <Rectangle Margin="14,0,0,0" SnapsToDevicePixels="true" Stroke="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}" StrokeThickness="1" StrokeDashArray="1 2"/>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <Style x:Key="SliderCheckBox" TargetType="{x:Type CheckBox}">
+                <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type CheckBox}">
+                            <ControlTemplate.Resources>
+                                <Storyboard x:Key="StoryboardIsChecked">
+                                    <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)" Storyboard.TargetName="CheckFlag">
+                                        <EasingDoubleKeyFrame KeyTime="0" Value="0"/>
+                                        <EasingDoubleKeyFrame KeyTime="0:0:0.2" Value="14"/>
+                                    </DoubleAnimationUsingKeyFrames>
+                                </Storyboard>
+                                <Storyboard x:Key="StoryboardIsCheckedOff">
+                                    <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)" Storyboard.TargetName="CheckFlag">
+                                        <EasingDoubleKeyFrame KeyTime="0" Value="14"/>
+                                        <EasingDoubleKeyFrame KeyTime="0:0:0.2" Value="0"/>
+                                    </DoubleAnimationUsingKeyFrames>
+                                </Storyboard>
+                            </ControlTemplate.Resources>
+                            <BulletDecorator Background="Transparent" SnapsToDevicePixels="true">
+                                <BulletDecorator.Bullet>
+                                    <Border x:Name="ForegroundPanel" BorderThickness="1" Width="35" Height="20" CornerRadius="10">
+                                        <Canvas>
+                                            <Border Background="White" x:Name="CheckFlag" CornerRadius="10" VerticalAlignment="Center" BorderThickness="1" Width="19" Height="18" RenderTransformOrigin="0.5,0.5">
+                                                <Border.RenderTransform>
+                                                    <TransformGroup>
+                                                        <ScaleTransform/>
+                                                        <SkewTransform/>
+                                                        <RotateTransform/>
+                                                        <TranslateTransform/>
+                                                    </TransformGroup>
+                                                </Border.RenderTransform>
+                                                <Border.Effect>
+                                                    <DropShadowEffect ShadowDepth="1" Direction="180" />
+                                                </Border.Effect>
+                                            </Border>
+                                        </Canvas>
+                                    </Border>
+                                </BulletDecorator.Bullet>
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" Margin="{TemplateBinding Padding}" RecognizesAccessKey="True" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" VerticalAlignment="Center"/>
+                            </BulletDecorator>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="HasContent" Value="true">
+                                    <Setter Property="FocusVisualStyle" Value="{StaticResource CheckRadioFocusVisual}"/>
+                                    <Setter Property="Padding" Value="4,0,0,0"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="false">
+                                    <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"/>
+                                </Trigger>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <!--<Setter TargetName="ForegroundPanel" Property="Background" Value="{DynamicResource Accent}" />-->
+                                    <Setter TargetName="ForegroundPanel" Property="Background" Value="Green" />
+                                    <Trigger.EnterActions>
+                                        <BeginStoryboard x:Name="BeginStoryboardCheckedTrue" Storyboard="{StaticResource StoryboardIsChecked}" />
+                                        <RemoveStoryboard BeginStoryboardName="BeginStoryboardCheckedFalse" />
+                                    </Trigger.EnterActions>
+                                </Trigger>
+                                <Trigger Property="IsChecked" Value="False">
+                                    <Setter TargetName="ForegroundPanel" Property="Background" Value="Gray" />
+                                    <Trigger.EnterActions>
+                                        <BeginStoryboard x:Name="BeginStoryboardCheckedFalse" Storyboard="{StaticResource StoryboardIsCheckedOff}" />
+                                        <RemoveStoryboard BeginStoryboardName="BeginStoryboardCheckedTrue" />
+                                    </Trigger.EnterActions>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="BlueRound" TargetType="{x:Type Button}">
+                <Setter Property="Background" Value="#FF1D3245" />
+                <Setter Property="Foreground" Value="#FFE8EDF9" />
+                <Setter Property="FontSize" Value="15" />
+                <Setter Property="SnapsToDevicePixels" Value="True" />
+
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button" >
+
+                            <Border Name="border" 
+                    BorderThickness="1"
+                    Padding="4,2" 
+                    BorderBrush="#336891" 
+                    CornerRadius="6" 
+                    Background="#0078d7">
+                                <ContentPresenter HorizontalAlignment="Center" 
+                                    VerticalAlignment="Center" 
+                                    TextBlock.TextAlignment="Center"
+                                    />
+                            </Border>
+
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="border" Property="BorderBrush" Value="#FFE8EDF9" />
+                                </Trigger>
+
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="border" Property="BorderBrush" Value="#FF1D3245" />
+                                    <Setter Property="Button.Foreground" Value="#FF1D3245" />
+                                    <Setter Property="Effect">
+                                        <Setter.Value>
+                                            <DropShadowEffect ShadowDepth="0" Color="#FF1D3245" Opacity="1" BlurRadius="10"/>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="border" Property="BorderBrush" Value="#336891" />
+                                    <Setter Property="Button.Foreground" Value="#336891" />
+                                </Trigger>
+                                <Trigger Property="IsFocused" Value="False">
+                                    <Setter TargetName="border" Property="BorderBrush" Value="#336891" />
+                                    <Setter Property="Button.Background" Value="#336891" />
+                                </Trigger>
+
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid>
+        <TextBlock x:Name="txtMainTitle" HorizontalAlignment="Left" Text="PowerShell Module Installer" VerticalAlignment="Top" FontSize="32" Margin="10,9,0,0" TextAlignment="Left" FontFamily="Segoe UI Light" Foreground="Black" Width="635"/>
+
+        <ProgressBar x:Name="ProgressBar" Width="627" Height="15" Margin="0,10,88,0" HorizontalAlignment="Right" VerticalAlignment="Top" Background="White" Foreground="LightGreen" />
+        <TextBox x:Name="txtPercentage" HorizontalAlignment="Right" Height="25" VerticalAlignment="Top" Width="67" IsEnabled="False" Margin="0,8,13,0" BorderThickness="0"/>
+        <TextBox x:Name="txtStatus" HorizontalAlignment="Right" Height="25" VerticalAlignment="Top" Width="630" IsEnabled="False" Margin="0,30,85,0" BorderThickness="0" Foreground="Red" Text="sfdfdfd"/>
+
+        <TabControl x:Name="tabControlMainAllModules" Margin="0,55,0,65" Style="{StaticResource TabControlLeftSide}" BorderThickness="0" >
+
+            <TabItem Header="Azure" Style="{StaticResource WhiteTabItems}" Width="150" IsSelected="True" Margin="0,13,0,0">
+
+                <Grid HorizontalAlignment="Left">
+
+                    <TabControl x:Name="tabControlSubAz" HorizontalAlignment="Left" Height="656" VerticalAlignment="Top" BorderThickness="0" Width="1210">
+                        <TabItem x:Name="tabAzPublicModule" Header="Released" Style="{StaticResource LineTabStyle}">
+                            <Grid Margin="0">
+
+                                <StackPanel Margin="10,10,264,10">
+                                    <Label Content="Azure PowerShell Modules" HorizontalAlignment="Left" FontSize="20" Foreground="Black" FontWeight="Bold"/>
+                                    <Label Content="Available Azure PowerShell Module" HorizontalAlignment="Left" FontSize="10" Foreground="Gray" Width="439"/>
+                                    <Separator Margin="15,10,15,0"/>
+                                    <Separator Margin="15,0,15,10"/>
+
+                                    <Grid Height="31">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="51*" />
+                                            <ColumnDefinition Width="178*"/>
+                                            <ColumnDefinition Width="63*" />
+                                            <ColumnDefinition Width="166*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Label Content="Search by Module :" Grid.Column="0" FontSize="12" Foreground="Gray" HorizontalAlignment="Right" VerticalAlignment="Center" Height="25" Margin="0,0,345,0" Grid.ColumnSpan="2"/>
+                                        <TextBox x:Name="txtAzPublicModuleNameSearch" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center" Width="337" Margin="0,4,0,5" />
+                                        <Label Content="Filter by Status  :" Grid.Column="2" HorizontalAlignment="Left" FontSize="12" Foreground="Gray" VerticalAlignment="Center" Height="25" Width="96"/>
+                                        <ComboBox x:Name="cmbAzPublicModuleStatusType" Grid.Column="2" HorizontalAlignment="Left" Margin="96,0,0,0" VerticalAlignment="Center" Width="348" Grid.ColumnSpan="2"/>
+
+                                    </Grid>
+
+                                    <Grid Height="31">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="35*" />
+                                            <ColumnDefinition Width="178*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Button x:Name="btnAzPublicSelectAll" Style="{StaticResource CleanLineStyle}" Grid.Column="0" Content="Select All" HorizontalAlignment="Left" Width="141" Height="20"  />
+                                        <Button x:Name="btnAzPublicSelectNone" Style="{StaticResource CleanLineStyle}" Grid.Column="1" Content="Select None" HorizontalAlignment="Left" Width="141" Height="20"  />
+                                    </Grid>
+                                    <ListView x:Name="lstAzPublicModules" HorizontalAlignment="Center" Height="371" Margin="0,10,0,0" Width="916" SelectionMode="Multiple">
+                                        <ListView.View>
+                                            <GridView>
+
+                                                <GridViewColumn Header="Check" DisplayMemberBinding="{Binding Check}" Width="40">
+                                                    <GridViewColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <CheckBox IsChecked="{Binding IsSelected}" />
+                                                        </DataTemplate>
+                                                    </GridViewColumn.CellTemplate>
+                                                </GridViewColumn>
+                                                <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="250" />
+                                                <GridViewColumn Header="Current Version" DisplayMemberBinding="{Binding cVersion}" Width="90" />
+                                                <GridViewColumn Header="Latest Version" DisplayMemberBinding="{Binding lVersion}" Width="90" />
+                                                <GridViewColumn Header="Owner" DisplayMemberBinding="{Binding Owner}" Width="150" />
+                                                <GridViewColumn Header="Count" DisplayMemberBinding="{Binding Count}" Width="50"/>
+                                                <GridViewColumn Header="Status" DisplayMemberBinding="{Binding Status}" Width="120" />
+                                                <GridViewColumn Header="Install Version" Width="120">
+                                                    <GridViewColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <ComboBox ItemsSource="{Binding Version}" SelectedItem="{Binding SelectedVersion}" Width="80"/>
+                                                        </DataTemplate>
+                                                    </GridViewColumn.CellTemplate>
+                                                </GridViewColumn>
+                                            </GridView>
+                                        </ListView.View>
+                                    </ListView>
+
+                                    <Grid Height="43">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96*" />
+                                            <ColumnDefinition Width="147*"/>
+                                            <ColumnDefinition Width="382*"/>
+                                            <ColumnDefinition Width="154*" />
+                                            <ColumnDefinition Width="154*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Label Content="Module Count:" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Center" Width="94" HorizontalContentAlignment="Right" Height="25" Margin="-2,0,0,0" />
+                                        <TextBox x:Name="txtAzPublicModuleCount" Grid.Column="1" Text="0" HorizontalAlignment="Left" Width="33" IsEnabled="False" BorderThickness="0" VerticalAlignment="Center" Height="15"/>
+                                        <Button x:Name="btnCheckAzPublicUpdates" Grid.Column="4" Content="Check For Updatest" HorizontalAlignment="Center" VerticalAlignment="Center" Width="135" Height="35"  />
+
+                                    </Grid>
+                                </StackPanel>
+
+
+                            </Grid>
+                        </TabItem>
+
+                    </TabControl>
+
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Microsoft Graph" Style="{StaticResource WhiteTabItems}" Width="150" IsSelected="True">
+                <Grid HorizontalAlignment="Left">
+
+                    <TabControl x:Name="tabControlSubGraph" HorizontalAlignment="Left" Height="656" VerticalAlignment="Top" BorderThickness="0" Width="1210">
+                        <TabItem x:Name="tabGraphPublicModule" Header="Released" Style="{StaticResource LineTabStyle}">
+                            <Grid Margin="0">
+
+                                <StackPanel Margin="10,10,264,10">
+                                    <Label Content="Azure PowerShell Modules" HorizontalAlignment="Left" FontSize="20" Foreground="Black" FontWeight="Bold"/>
+                                    <Label Content="Available Azure PowerShell Module" HorizontalAlignment="Left" FontSize="10" Foreground="Gray" Width="439"/>
+                                    <Separator Margin="15,10,15,0"/>
+                                    <Separator Margin="15,0,15,10"/>
+
+                                    <Grid Height="31">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="51*" />
+                                            <ColumnDefinition Width="178*"/>
+                                            <ColumnDefinition Width="63*" />
+                                            <ColumnDefinition Width="166*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Label Content="Search by Module :" Grid.Column="0" FontSize="12" Foreground="Gray" HorizontalAlignment="Right" VerticalAlignment="Center" Height="25" Margin="0,0,345,0" Grid.ColumnSpan="2"/>
+                                        <TextBox x:Name="txtGraphPublicModuleNameSearch" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center" Width="337" Margin="0,4,0,5" />
+                                        <Label Content="Filter by Status  :" Grid.Column="2" HorizontalAlignment="Left" FontSize="12" Foreground="Gray" VerticalAlignment="Center" Height="25" Width="96"/>
+                                        <ComboBox x:Name="cmbGraphPublicModuleStatusType" Grid.Column="2" HorizontalAlignment="Left" Margin="96,0,0,0" VerticalAlignment="Center" Width="348" Grid.ColumnSpan="2"/>
+
+                                    </Grid>
+
+                                    <Grid Height="31">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="35*" />
+                                            <ColumnDefinition Width="178*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Button x:Name="btnGraphPublicSelectAll" Style="{StaticResource CleanLineStyle}" Grid.Column="0" Content="Select All" HorizontalAlignment="Left" Width="141" Height="20"  />
+                                        <Button x:Name="btnGraphPublicSelectNone" Style="{StaticResource CleanLineStyle}" Grid.Column="1" Content="Select None" HorizontalAlignment="Left" Width="141" Height="20"  />
+                                    </Grid>
+                                    <ListView x:Name="lstGraphPublicModules" HorizontalAlignment="Center" Height="371" Margin="0,10,0,0" Width="916" SelectionMode="Multiple">
+                                        <ListView.View>
+                                            <GridView>
+
+                                                <GridViewColumn Header="Check" DisplayMemberBinding="{Binding Check}" Width="40">
+                                                    <GridViewColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <CheckBox IsChecked="{Binding IsSelected}" />
+                                                        </DataTemplate>
+                                                    </GridViewColumn.CellTemplate>
+                                                </GridViewColumn>
+                                                <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="250" />
+                                                <GridViewColumn Header="Current Version" DisplayMemberBinding="{Binding cVersion}" Width="90" />
+                                                <GridViewColumn Header="Latest Version" DisplayMemberBinding="{Binding lVersion}" Width="90" />
+                                                <GridViewColumn Header="Owner" DisplayMemberBinding="{Binding Owner}" Width="150" />
+                                                <GridViewColumn Header="Count" DisplayMemberBinding="{Binding Count}" Width="50"/>
+                                                <GridViewColumn Header="Status" DisplayMemberBinding="{Binding Status}" Width="120" />
+                                                <GridViewColumn Header="Install Version" Width="120">
+                                                    <GridViewColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <ComboBox ItemsSource="{Binding Version}" SelectedItem="{Binding SelectedVersion}" Width="80"/>
+                                                        </DataTemplate>
+                                                    </GridViewColumn.CellTemplate>
+                                                </GridViewColumn>
+                                            </GridView>
+                                        </ListView.View>
+                                    </ListView>
+
+                                    <Grid Height="43">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96*" />
+                                            <ColumnDefinition Width="147*"/>
+                                            <ColumnDefinition Width="382*"/>
+                                            <ColumnDefinition Width="154*" />
+                                            <ColumnDefinition Width="154*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Label Content="Module Count:" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Center" Width="94" HorizontalContentAlignment="Right" Height="25" Margin="-2,0,0,0" />
+                                        <TextBox x:Name="txtGraphPublicModuleCount" Grid.Column="1" Text="0" HorizontalAlignment="Left" Width="33" IsEnabled="False" BorderThickness="0" VerticalAlignment="Center" Height="15"/>
+                                        <Button x:Name="btnCheckGraphPublicUpdates" Grid.Column="4" Content="Check For Updatest" HorizontalAlignment="Center" VerticalAlignment="Center" Width="135" Height="35"  />
+
+                                    </Grid>
+                                </StackPanel>
+
+
+                            </Grid>
+                        </TabItem>
+
+                        <TabItem x:Name="tabGraphBeta" Header="Beta" Style="{StaticResource LineTabStyle}">
+
+                        </TabItem>
+
+
+                    </TabControl>
+
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Exchange Online" Style="{StaticResource WhiteTabItems}" Width="150" IsSelected="True">
+            </TabItem>
+
+            <TabItem Header="Sharepoint Online" Style="{StaticResource WhiteTabItems}" Width="150" IsSelected="True">
+            </TabItem>
+
+            <TabItem Header="Teams" Style="{StaticResource WhiteTabItems}" Width="150" IsSelected="True">
+            </TabItem>
+
+            <TabItem Header="Solutions" Style="{StaticResource WhiteTabItems}" Width="150" IsSelected="True">
+                <Grid HorizontalAlignment="Left">
+                    <TabControl HorizontalAlignment="Left" Height="656" VerticalAlignment="Top" BorderThickness="0" Width="1210">
+                        <TabItem x:Name="tabScubaGearModule" Header="ScubaGear" Style="{StaticResource LineTabStyle}" >
+                            <Grid Margin="0">
+
+                                <StackPanel Margin="10,10,264,10">
+                                    <Label x:Name="lblScubaGearMain" Content="ScubaGear Module" HorizontalAlignment="Left" FontSize="20" Foreground="Black" FontWeight="Bold"/>
+                                    <Label x:Name="lblScubaGearSub" Content="The ScubaGear Module....." HorizontalAlignment="Left" FontSize="10" Foreground="Gray" Width="439"/>
+                                    <Separator Margin="15,0,15,10"/>
+
+                                    
+
+                                    <Grid Height="31">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="35*" />
+                                            <ColumnDefinition Width="178*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Button x:Name="btnScubaGearSelectAll" Style="{StaticResource CleanLineStyle}" Grid.Column="0" Content="Select Module" HorizontalAlignment="Left" Width="141" Height="20"  />
+                                        <Button x:Name="btnScubaGearSelectNone" Style="{StaticResource CleanLineStyle}" Grid.Column="1" Content="Remove Module" HorizontalAlignment="Left" Width="141" Height="20"  />
+                                    </Grid>
+                                    <ListView x:Name="lstScubaGearModules" HorizontalAlignment="Center" Height="210" Margin="0,10,0,0" Width="916" SelectionMode="Multiple">
+                                        <ListView.View>
+                                            <GridView>
+
+                                                <GridViewColumn Header="Check" DisplayMemberBinding="{Binding Check}" Width="40">
+                                                    <GridViewColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <CheckBox IsChecked="{Binding IsSelected}" />
+                                                        </DataTemplate>
+                                                    </GridViewColumn.CellTemplate>
+                                                </GridViewColumn>
+                                                <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="250" />
+                                                <GridViewColumn Header="Current Version" DisplayMemberBinding="{Binding cVersion}" Width="90" />
+                                                <GridViewColumn Header="Latest Version" DisplayMemberBinding="{Binding lVersion}" Width="90" />
+                                                <GridViewColumn Header="Owner" DisplayMemberBinding="{Binding Owner}" Width="150" />
+                                                <GridViewColumn Header="Count" DisplayMemberBinding="{Binding Count}" Width="50"/>
+                                                <GridViewColumn Header="Status" DisplayMemberBinding="{Binding Status}" Width="120" />
+                                                <GridViewColumn Header="Install Version" Width="120">
+                                                    <GridViewColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <ComboBox ItemsSource="{Binding Version}" SelectedItem="{Binding SelectedVersion}" Width="80"/>
+                                                        </DataTemplate>
+                                                    </GridViewColumn.CellTemplate>
+                                                </GridViewColumn>
+                                            </GridView>
+                                        </ListView.View>
+                                    </ListView>
+
+                                    <Grid Height="43">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="96*" />
+                                            <ColumnDefinition Width="147*"/>
+                                            <ColumnDefinition Width="382*"/>
+                                            <ColumnDefinition Width="154*" />
+                                            <ColumnDefinition Width="154*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Label Content="Module Count:" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Center" Width="94" HorizontalContentAlignment="Right" Height="25" Margin="-2,0,0,0" />
+                                        <TextBox x:Name="txtScubaGearModuleCount" Grid.Column="1" Text="0" HorizontalAlignment="Left" Width="33" IsEnabled="False" BorderThickness="0" VerticalAlignment="Center" Height="15"/>
+                                        <Button x:Name="btnCheckScubaGearUpdates" Grid.Column="4" Content="Check For Updatest" HorizontalAlignment="Center" VerticalAlignment="Center" Width="135" Height="35"  />
+
+                                    </Grid>
+                                    <Label x:Name="lblScubaGearAdditional" Content="ScubaGear Additionals" HorizontalAlignment="Left" FontSize="20" Foreground="Black" FontWeight="Bold"/>
+                                    <CheckBox x:Name="chkScubaGearOPAInstall" Content="Open Policy Agent (Executable)" IsChecked="True" Margin="10" FontSize="14" />
+                                </StackPanel>
+
+
+                            </Grid>
+                        </TabItem>
+
+                        <TabItem x:Name="tabPAWCSMModule" Header="PAW-CSM" Style="{StaticResource LineTabStyle}">
+                            
+                        </TabItem>
+
+                        
+
+                        <TabItem x:Name="tabScubaConnectModule" Header="ScubaConnect" Style="{StaticResource LineTabStyle}">
+                        </TabItem>
+
+                        <TabItem x:Name="tabScubaTankModule" Header="ScubaTank" Style="{StaticResource LineTabStyle}">
+                        </TabItem>
+                    </TabControl>
+                </Grid>
+            </TabItem>
+        </TabControl>
+        <StackPanel Margin="0,60,10,92" HorizontalAlignment="Right">
+            <Label Content="Selected Modules:" HorizontalAlignment="Left" FontSize="12" Foreground="Gray" Width="249"/>
+            <ListBox x:Name="txtAzPubicModuleInfo" HorizontalAlignment="Left" FontSize="12" Width="248" Height="581"/>
+            
+        </StackPanel>
+        <CheckBox x:Name="chkAutoUpdate"  Content="Auto update modules" HorizontalAlignment="Left" Margin="169,0,0,31" VerticalAlignment="Bottom" Width="183" Style="{DynamicResource SliderCheckBox}" />
+        <CheckBox x:Name="chkCleanUp"  Content="Clean up old modules" HorizontalAlignment="Left" Margin="335,0,0,31" VerticalAlignment="Bottom" Width="185" Style="{DynamicResource SliderCheckBox}" />
+        <CheckBox x:Name="chkRemoveAll"  Content="Remove all modules (except selected)" HorizontalAlignment="Left" Margin="499,716,0,0" VerticalAlignment="Top" Width="253" Style="{DynamicResource SliderCheckBox}" />
+        <CheckBox x:Name="chkInstallUserContext" Content="Install under user context" HorizontalAlignment="Left" Margin="751,716,0,0" VerticalAlignment="Top" Width="186" Style="{DynamicResource SliderCheckBox}" />
+        <Button x:Name="btnInstall" Style="{DynamicResource BlueRound}" Content="Install Selected Modules" HorizontalAlignment="Left" VerticalAlignment="Top"  Width="246" Height="66" FontSize="16" Margin="1106,680,0,0" />
+        <Button x:Name="btnExit" Content="Exit" HorizontalAlignment="Left" VerticalAlignment="Top"  Width="80" Height="46" FontSize="16" Margin="10,700,0,0" IsEnabled="False"/>
+    </Grid>
+</Window>
