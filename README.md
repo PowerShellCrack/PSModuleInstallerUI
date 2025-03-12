@@ -54,7 +54,7 @@ Using Intune Managed Installer with this UI, you can ensure that only approved P
 
 Windows Defender Application Control (WDAC) helps protect your devices by allowing only trusted applications to run. By using this UI in conjunction with WDAC, you can control which PowerShell modules are allowed to run on your devices. This adds an extra layer of security by ensuring that only approved modules are executed, reducing the risk of running malicious or untrusted code.
 
-By integrating this UI with Intune Managed Installer and WDAC, you can create a robust and secure environment for managing PowerShell modules, ensuring compliance and reducing the risk of security threats. This integration also ensures that the modules will run correctly on the device, providing a reliable and consistent experience for users.
+By leveraging this UI as an app while using Intune Managed Installer and WDAC, you can maintain a secure environment for managing PowerShell modules, ensuring compliance and reducing the risk of security threats. This integration also ensures that the modules will run correctly on the device, providing a reliable and consistent experience for users.
 
 ## Parameters
 

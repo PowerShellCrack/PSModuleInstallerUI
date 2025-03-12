@@ -47,7 +47,8 @@ Function Show-SequenceWindow {
         [string]$Theme,
         $RunningApps,
         $TopPosition,
-        $LeftPosition
+        $LeftPosition,
+        $ShowMinimized
     )
 
     [string]${CmdletName} = $MyInvocation.MyCommand
@@ -88,16 +89,17 @@ Function Show-SequenceWindow {
         <TextBlock x:Name="txtMainTitle" HorizontalAlignment="Left" Text="PowerShell Module Installer" VerticalAlignment="Top" FontSize="32" Margin="10,10,0,0" TextAlignment="Left" FontFamily="Segoe UI Light" Foreground="Black" Width="635"/>
         <TextBox x:Name="txtVersion" HorizontalAlignment="Right" Height="25" VerticalAlignment="Top" Width="67" IsEnabled="False" Margin="0,10,10,0" BorderThickness="0" HorizontalContentAlignment="Right" />
 
-        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="1366" Background="LightBlue" Opacity="80" Height="145">
+        <StackPanel x:Name="stackBanner" HorizontalAlignment="Center" VerticalAlignment="Center" Width="1366" Background="LightBlue" Opacity="80" Height="145">
             <TextBox x:Name="txtMessage" HorizontalAlignment="Center" HorizontalContentAlignment="Center" IsEnabled="False" BorderThickness="0" FontSize="26" FontWeight="Bold" Background="Transparent" Text="Please Wait..." TextWrapping="NoWrap" />
             <ProgressBar x:Name="ProgressBarMain" Width="630" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5" IsIndeterminate="True" />
             <ProgressBar x:Name="ProgressBarSub" Width="630" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5" />
             <TextBox x:Name="txtStatus" HorizontalAlignment="Center" Height="55" Width="630" IsEnabled="False" BorderThickness="0" Background="Transparent" FontSize="18" Text="Loading..." TextWrapping="Wrap"/>
 
         </StackPanel>
-        <TextBox x:Name="txtPercentage" HorizontalAlignment="Right" Height="25" VerticalAlignment="Bottom" Width="67" IsEnabled="False" BorderThickness="0" TextWrapping="NoWrap" Margin="10"/>
+        <TextBox x:Name="txtPercentage" HorizontalAlignment="Right" Height="25" VerticalAlignment="Bottom" Width="67" IsEnabled="False" BorderThickness="0" TextWrapping="NoWrap" Margin="10" Background="Transparent"/>
 
-        <Button x:Name="btnExit" Content="Exit" HorizontalAlignment="Left" VerticalAlignment="Top"  Width="80" Height="46" FontSize="16" Margin="10,700,0,0" IsEnabled="False"/>
+        <Button x:Name="btnMinimize" Content="Minimize" HorizontalAlignment="Left" VerticalAlignment="Bottom" Width="80" Height="46" FontSize="16" Margin="10,0,0,10"/>
+        <Button x:Name="btnRestore" Content="Restore" HorizontalAlignment="Left" VerticalAlignment="Bottom" Width="80" Height="46" FontSize="16" Margin="10,0,0,10" Background="#FF444444" Foreground="White" Visibility="Collapsed"/>
     </Grid>
 </Window>
 "@
@@ -150,9 +152,63 @@ Function Show-SequenceWindow {
             $syncHash.Window.DragMove()
         })
 
-        #action for exit button
-        $syncHash.btnExit.Add_Click({
-            Close-UISequenceWindow
+        $syncHash.Window.Add_Loaded({
+            $syncHash.isLoaded = $True
+            # Add minimize button click event
+            $syncHash.btnMinimize.Add_Click({
+                # Get screen dimensions
+                $screenWidth = [System.Windows.SystemParameters]::PrimaryScreenWidth
+                $screenHeight = [System.Windows.SystemParameters]::PrimaryScreenHeight
+                $taskbarHeight = [System.Windows.SystemParameters]::PrimaryScreenHeight - [System.Windows.SystemParameters]::WorkArea.Height
+
+                
+                $syncHash.stackBanner.Background ='#343447'
+                $syncHash.txtPercentage.Foreground = 'White'
+                # Set minimized window dimensions
+                $minimizedWidth = 300
+                $minimizedHeight = 100
+        
+                # Move window to bottom right corner
+                $syncHash.Window.Width = $minimizedWidth
+                $syncHash.Window.Height = $minimizedHeight
+                $syncHash.Window.Left = $screenWidth - $minimizedWidth
+                $syncHash.Window.Top = $screenHeight - $minimizedHeight - $taskbarHeight
+        
+                # Hide unnecessary elements
+                $syncHash.txtMainTitle.Visibility = 'Collapsed'
+                $syncHash.txtMessage.Visibility = 'Collapsed'
+                $syncHash.ProgressBarSub.Visibility = 'Collapsed'
+                $syncHash.txtStatus.Visibility = 'Collapsed'
+                $syncHash.btnExit.Visibility = 'Collapsed'
+                $syncHash.btnMinimize.Visibility = 'Collapsed'
+                $syncHash.btnRestore.Visibility = 'Visible'
+            })
+
+            # Add restore button click event
+            $syncHash.btnRestore.Add_Click({
+
+                $screenWidth = [System.Windows.SystemParameters]::PrimaryScreenWidth
+                $screenHeight = [System.Windows.SystemParameters]::PrimaryScreenHeight
+                
+                # Restore window to original dimensions and position
+                $syncHash.Window.Width = 1366
+                $syncHash.Window.Height = 768
+                $syncHash.Window.WindowStartupLocation = 'CenterScreen'
+                $syncHash.Window.Left = ($screenWidth - 1366) / 2
+                $syncHash.Window.Top = ($screenHeight - 768) / 2
+
+                $syncHash.stackBanner.Background ='LightBlue'
+                $syncHash.txtPercentage.Foreground = 'Black'
+
+                # Show previously hidden elements
+                $syncHash.txtMainTitle.Visibility = 'Visible'
+                $syncHash.txtMessage.Visibility = 'Visible'
+                $syncHash.ProgressBarSub.Visibility = 'Visible'
+                $syncHash.txtStatus.Visibility = 'Visible'
+                $syncHash.btnExit.Visibility = 'Visible'
+                $syncHash.btnMinimize.Visibility = 'Visible'
+                $syncHash.btnRestore.Visibility = 'Collapsed'
+            })
         })
 
         $syncHash.Window.ShowDialog()
