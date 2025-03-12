@@ -67,13 +67,15 @@ The `UIConfig.json` file controls how the UI is displayed. It consists of three 
 This section determines the default settings for the UI:
 
 - `PowerShellVersion`: Specifies the PowerShell version to use (e.g., 5.1).
-- `AutoUpdate`: Enables or disables automatic updates (True/False).
-- `RemoveDuplicates`: Removes duplicate modules (True/False).
+- `AutoUpdate`: Enables or disables automatic updates for all modules installed; **not just what is selected** (True/False).
+- `RemoveDuplicates`: Removes duplicate modules for all modules installed; **not just what is selected** (True/False).
 - `RemoveAllModulesFirst`: Removes all modules before installing new ones (True/False).
 - `AllowUserContextInstall`: Allows installation in the user context (True/False).
 - `InstallMode`: Specifies the installation mode (e.g., CurrentUser).
 - `UseExternalInstaller`: Uses an external installer if available (True/False).
 - `IgnorePoshProcessCheck`: Ignore any processes identified to use powershell modules (eg: code, ise, powershell, pwsh) (True/False).
+
+>TIP: By selecting _Remove all modules_, unselecting all other options, and choosing installed modules (use the _filter by status_), will remove the modules selected!
 
 ### ModuleGroups
 
@@ -131,8 +133,10 @@ Here are some screenshots of the PSModuleInstallerUI:
 
 There are three global variables that can be used to identify UI issues. 
 
-- $Global:UI.Error
-- $Global:BuildSequence.Error
-- $Global:InstallSequence.Error
+```powershell
+$Global:UI.Error
+$Global:BuildSequence.Error
+$Global:InstallSequence.Error
+```
 
 If you have any issues, please submit them. 
