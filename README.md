@@ -134,14 +134,17 @@ This section defines groups of modules that are part of a solution. These groups
 
 Here are some screenshots of the PSModuleInstallerUI:
 
-![Settings](.images/search.jpg)
+![Build](.images/build.jpg)
 
-![Module Management](.images/ui_main.jpg)
+![minimized](.images/minimized.jpg)
 
+![UI](.images/ui_main.jpg)
 
-![Module Management](.images/multiple.jpg)
+![UImultiple](.images/multiple.jpg)
 
-![Progress](.images/install_bar.jpg)
+![prompt](.images/processPrompt.jpg)
+
+![Install](.images/install_bar.jpg)
 
 ![Progress](.images/powershell_output.jpg)
 
