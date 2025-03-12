@@ -1,9 +1,13 @@
 # This script is intended to be used with the Intune/ConfigMgr
-$TagName = "PowerShellModuleInstaller"
-$TagVersion = "2.3.0"
-$TagPath = "$env:ALLUSERSPROFILE\$TagName.$TagVersion.tag"
+Param(
+    $TagName,
+    $TagVersion,
+    $TagDetectionPath
+)
 
-Remove-Item $TagPath -Force -ErrorAction SilentlyContinue
+$TagPath = "$TagDetectionPath\$TagName.$TagVersion.tag"
+
+if(Test-Path $TagPath) {Remove-Item $TagPath -Force -ErrorAction SilentlyContinue | Out-Null}
 
 if(Test-Path $TagPath) {
     exit 1

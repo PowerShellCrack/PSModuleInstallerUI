@@ -1,5 +1,5 @@
 # Description: This script is used to detect if a tag is present on a resource
-$TagName = "PowerShellModuleInstalle"
+$TagName = "PowerShellModuleInstaller"
 $TagVersion = "2.3.0"
 $TagPath = "$env:ALLUSERSPROFILE\$TagName.$TagVersion.tag"
 

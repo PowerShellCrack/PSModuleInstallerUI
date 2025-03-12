@@ -25,11 +25,26 @@ PS> .\PowerShellModuleInstallerUI2.ps1 -ForceNewModuleData -ForceNewSolutionData
 
 ### Recommended Command for Packaged App
 
-For a packaged app, it is recommended to run the following command:
+For a packaged app, it is recommended to run the following commands:
 
-```powershell
-PS> .\PowerShellModuleInstallerUI2.ps1 -SolutionDataPath "C:\ProgramData\Company" -LogFilePath "C:\ProgramData\Company" -TagDetectionPath "C:\ProgramData\Company
+For Install:
+```cmd
+C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File .\PowerShellModuleInstallerUI2.ps1 -StoredDataPath "C:\ProgramData\Company" -LogFilePath "C:\ProgramData\Company" -TagDetectionPath "C:\ProgramData\Company"
 ```
+
+For uninstall
+```cmd
+C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowsStyle Hidden -File .\Uninstall.ps1 TagName "PowerShellModuleInstaller" -TagVersion "2.3.0" -TagDetectionPath "C:\ProgramData\Company"
+```
+
+For Detection (update variables in script)
+```powershell
+.\DetectionTag.ps1
+```
+
+## Why use this?
+
+This UI is designed for encironments that want to "control" what modules are avaialbe to dowload. It also provides a easy means of updating modules 
 
 ## Parameters
 
