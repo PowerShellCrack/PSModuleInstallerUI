@@ -189,7 +189,7 @@ Function Show-SequenceWindow {
 
                 $screenWidth = [System.Windows.SystemParameters]::PrimaryScreenWidth
                 $screenHeight = [System.Windows.SystemParameters]::PrimaryScreenHeight
-                
+
                 # Restore window to original dimensions and position
                 $syncHash.Window.Width = 1366
                 $syncHash.Window.Height = 768
@@ -884,7 +884,7 @@ Function Show-UIMainWindow
             Else{Return $PwshInstalled}
         }
 
-        function Show-ConfirmationPopup {
+        function Show-UIConfirmationPopup {
             param (
                 [string]$Message
             )
@@ -1035,12 +1035,25 @@ Function Show-UIMainWindow
 
         }#end runspace function
 
-        Function Get-RunningPowershellApps {
+        Function Test-UIVSCode{
+            if($env:TERM_PROGRAM -eq 'vscode') {
+                return $true;
+            }
+            Else{
+                return $false;
+            }
+        }
+        Function Get-UIRunningPowershellApps {
             param([switch]$Passthru)
 
             $PoshObject = @()
             # Define the list of processes to check
-            $processNames = @("Code", "powershell_ise", "powershell", "pwsh")
+            If(Test-UIVSCode){
+                $processNames = @("powershell_ise", "powershell", "pwsh")
+            }
+            Else{
+                $processNames = @("Code", "powershell_ise", "powershell", "pwsh")
+            }
 
             # Get the current process ID
             $currentProcessId = $PID
@@ -1067,14 +1080,14 @@ Function Show-UIMainWindow
             }
         }
 
-        function Confirm-RunningApps {
+        function Confirm-UIRunningApps {
             # Get all running PowerShell instances except the current one
-            $runningPS = Get-RunningPowershellApps -Passthru
+            $runningPS = Get-UIRunningPowershellApps -Passthru
 
             if ($runningPS.count -gt 0) {
                 # Prompt user with XAML Popup
                 $msg = ("There are {0} applications currently running that will be closed." -f $runningPS.count)
-                $continue = Show-ConfirmationPopup -Message $msg
+                $continue = Show-UIConfirmationPopup -Message $msg
 
                 if ($continue.Decision) {
                     # Kill detected PowerShell processes
@@ -1703,10 +1716,10 @@ Function Show-UIMainWindow
         #action for exit button
         $syncHash.btnInstall.Add_Click({
             $syncHash.btnInstall.IsEnabled = $false
-            If( ([Boolean]::Parse($syncHash.Config.DefaultSettings.SkipPoshProcessCheck)) -or ($syncHash.DisableProcessCheck) ){
-                $result = $true
+            If( -NOT([Boolean]::Parse($syncHash.Config.DefaultSettings.SkipPoshProcessCheck)) -or -NOT($syncHash.DisableProcessCheck) ){
+                $result = Confirm-UIRunningApps
             }Else{
-                $result = Confirm-RunningApps
+                $result = $true
             }
            
             If($result){
@@ -2986,14 +2999,6 @@ If($StoredDataPath){
     $SolutionDataPath = "$scriptPath\ExportedSolutionData.xml"
 }
 
-#code can't be killed as it can have many processes running
-If(Test-VSCode){
-    Write-LogEntry -Message "Running in VS code, disabling process check" -Source $MyInvocation.MyCommand.Name -Severity 2
-    $DisableProcessKill = $true
-}else{
-    $DisableProcessKill = $false
-}
-
 #build array
 $TabItemData = @()
 $TabControlXaml = @()
@@ -3205,9 +3210,9 @@ If($Global:UI.OutputData.DoAction -eq $False){
         $Global:UI.Error
     }
     Exit 1
-}ElseIf($UIConfig.DefaultSettings.UseExternalInstaller){
+}ElseIf($UIConfig.DefaultSettings.UseExternalInstaller -ne $false){
     #use external installer
-    Write-LogEntry = "Using external installer..." -Source $MyInvocation.MyCommand.Name -Severity 1
+    Write-LogEntry -Message "Using external installer..." -Source $MyInvocation.MyCommand.Name -Severity 1
     Return $Global:UI.OutputData
 }Else{
     Write-LogEntry -Message "Starting module install sequence..." -Source $MyInvocation.MyCommand.Name -Severity 1
