@@ -2909,6 +2909,7 @@ If($LogFilePath){
 }else{
     $LogFilePath = Join-Path "$scriptPath\Logs" -ChildPath $FileName
 }
+New-Item -Path (Split-Path $LogFilePath -Parent) -ItemType Directory -ErrorAction SilentlyContinue | Out-Null
 Write-Host "logging to file: $LogFilePath" -ForegroundColor Cyan
 
 $ConfigFilePath = "$scriptPath\UIConfig.json"
