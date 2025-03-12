@@ -3148,8 +3148,8 @@ If($Global:UI.OutputData.DoAction -eq $False){
         Write-Host "==================================================================" -ForegroundColor Red
         $Global:UI.Error
     }
-    Exit
-}ElseIf($UIConfig.DefaultSettings.UseExternalInstaller -and -not $SimulateInstall){
+    Exit 1
+}ElseIf($UIConfig.DefaultSettings.UseExternalInstaller){
     #use external installer
     Write-LogEntry = "Using external installer..." -Source $MyInvocation.MyCommand.Name -Severity 1
     Return $Global:UI.OutputData
