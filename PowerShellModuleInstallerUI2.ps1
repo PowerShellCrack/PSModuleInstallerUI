@@ -3149,7 +3149,7 @@ If($Global:UI.OutputData.DoAction -eq $False){
         $Global:UI.Error
     }
     Exit
-}ElseIf($Global:UI.OutputData.UseExternalInstaller -and -not $SimulateInstall){
+}ElseIf($UIConfig.DefaultSettings.UseExternalInstaller -and -not $SimulateInstall){
     #use external installer
     Write-LogEntry = "Using external installer..." -Source $MyInvocation.MyCommand.Name -Severity 1
     Return $Global:UI.OutputData
