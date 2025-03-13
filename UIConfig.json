@@ -111,8 +111,22 @@
         {
             "Name": "Microsoft Powershell",
             "Description": "PowerShell modules from Microsoft",
-            "ModuleSearch": "Microsoft.PowerShell.*",
+            "ModuleSearch": ["*PowerStig","*PowerShell*","MSOnline","MSOL*"],
             "ModuleAuthors": ["Microsoft Corporation","Microsoft"],
+            "ModuleVersion": [],
+            "IncludePrereleaseVersion": "False",
+            "ShowBetaTab": "False",
+            "IncludedModules": [],
+            "ExcludedModules": [
+                "Az.PowerBIEmbedded",
+                "AzureRM.PowerBIEmbedded"
+            ]
+        },
+        {
+            "Name": "Microsoft Bicep",
+            "Description": "A module to run Bicep using PowerShell.",
+            "ModuleSearch": "Bicep",
+            "ModuleAuthors": ["Stefan Ivemo"],
             "ModuleVersion": [],
             "IncludePrereleaseVersion": "False",
             "ShowBetaTab": "False",

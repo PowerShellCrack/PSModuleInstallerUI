@@ -2247,13 +2247,13 @@ Function Get-ModuleListData{
             $ModuleParam = @{
                 Name = $ModuleGroupItem.ModuleSearch
             }
-            $SearchMessage = ("Searching for modules with criteria [{0}] from the PowerShell Gallery..." -f $ModuleGroupItem.ModuleSearch)
+            $SearchMessage = ("Searching for modules with criteria [{0}] from the PowerShell Gallery..." -f ($ModuleGroupItem.ModuleSearch -join ','))
 
             If($ModuleGroupItem.ModuleVersion -gt 0){
                 $ModuleParam += @{
                     RequiredVersion = $ModuleGroupItem.ModuleVersion
                 }
-                $SearchMessage += ("Searching for modules with criteria [{0}] and version [{1}] from the PowerShell Gallery..." -f $ModuleGroupItem.ModuleSearch,$ModuleGroupItem.ModuleVersion)
+                $SearchMessage += ("Searching for modules with criteria [{0}] and version [{1}] from the PowerShell Gallery..." -f ($ModuleGroupItem.ModuleSearch -join ','),$ModuleGroupItem.ModuleVersion)
             }
 
             Write-Verbose $SearchMessage

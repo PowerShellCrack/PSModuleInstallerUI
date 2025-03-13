@@ -101,10 +101,10 @@ This section defines groups of modules that can be managed together. Each group 
 - `Name`: The name of the module group.
 - `Description`: A description of the module group.
 - `PowerShellVersionSupport`: An array of supported PowerShell versions.
-- `ModuleSearch`: A search pattern to find modules.
+- `ModuleSearch`: A search pattern to find modules. This can be a string or array. User \* to search wildcard 
 - `ModuleAuthors`: An array of authors of the modules.
 - `ModuleVersion`: An array of specific module versions.
-- `IncludePrereleaseVersion`: A boolean indicating whether to include prerelease versions.
+- `IncludePrereleaseVersion`: A boolean indicating whether to include prerelease versions.(this feature is not avaialble yet)
 - `ShowBetaTab`: A boolean indicating whether to show a beta tab.
 - `IncludedModules`: An array of included modules.
 - `ExcludedModules`: An array of excluded modules.
