@@ -26,6 +26,18 @@
             "ExcludedModules": []
         },
         {
+            "Name": "AzureRM",
+            "Description": " [Deprecated] Azure Resource Manager Module - Cmdlets to manage resources in Azure [Deprecated]",
+            "PowerShellVersionSupport": ["5.1"],
+            "ModuleSearch": "AzureRM.*",
+            "ModuleAuthors": ["Microsoft Corporation","Microsoft"],
+            "ModuleVersion": [],
+            "IncludePrereleaseVersion": "False",
+            "ShowBetaTab": "False",
+            "IncludedModules": [],
+            "ExcludedModules": []
+        },
+        {
             "Name": "Microsoft Entra",
             "Description": "Microsoft Entra PowerShell v1.0: Microsoft Entra PowerShell is a scenario-driven module that allows administrators to efficiently manage Entra ID resources, including users, groups, applications, and policies, among others",
             "PowerShellVersionSupport": ["5.1","7.*"],
@@ -111,16 +123,13 @@
         {
             "Name": "Microsoft Powershell",
             "Description": "PowerShell modules from Microsoft",
-            "ModuleSearch": ["*PowerStig","*PowerShell*","MSOnline","MSOL*"],
-            "ModuleAuthors": ["Microsoft Corporation","Microsoft"],
+            "ModuleSearch": ["*PowerStig","Microsoft.*PowerShell*","MSOnline","MSOL*"],
+            "ModuleAuthors": ["Microsoft Corporation"],
             "ModuleVersion": [],
             "IncludePrereleaseVersion": "False",
             "ShowBetaTab": "False",
             "IncludedModules": [],
-            "ExcludedModules": [
-                "Az.PowerBIEmbedded",
-                "AzureRM.PowerBIEmbedded"
-            ]
+            "ExcludedModules": []
         },
         {
             "Name": "Microsoft Bicep",

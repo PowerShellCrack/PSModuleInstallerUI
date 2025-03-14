@@ -3319,7 +3319,7 @@ If($Global:UI.OutputData.RepairSelected)
         try {
             Get-Module -Name $RepairModule.Name -ListAvailable | Remove-Module -Force -ErrorAction Stop
             Get-Module -Name $RepairModule.Name -ListAvailable | Uninstall-Module -Force -ErrorAction Stop
-            Install-Module -Name $RepairModule.Name -Scope $InstallContext -Force -ErrorAction Stop
+            Install-Module -Name $RepairModule.Name -Scope $InstallContext -AllowClobber -Force -ErrorAction Stop
         }
         catch {
             Write-LogEntry -Message ("Failed to repair module [{0}]: {1}" -f $RepairModule.Name,$_.Exception.Message) -Source 'Installer' -Severity 3
@@ -3380,7 +3380,7 @@ If($Global:UI.OutputData.AutoUpdate)
             #install module if it was removed
             If( ($RemovedModules | Select -Unique) -contains $ModuleUpdate.Name){
                 Write-LogEntry -Message ("Module was recently removed, installing module [{0}]" -f $ModuleUpdate.Name) -Source 'Installer' -Severity 0
-                Install-Module -Name $ModuleUpdate.Name -Scope $InstallContext -Force -ErrorAction Stop
+                Install-Module -Name $ModuleUpdate.Name -Scope $InstallContext -AllowClobber -Force -ErrorAction Stop
             }Else{
                 Write-LogEntry -Message ("Updating module [{0}]" -f $ModuleUpdate.Name) -Source 'Installer' -Severity 0
                 Update-Module -Name $ModuleUpdate.Name -Scope $InstallContext -Force -ErrorAction Stop
@@ -3461,7 +3461,7 @@ If($Global:UI.OutputData.SelectedModules.count -gt 0)
                 - update ACL for module
             #>
             Try{
-                Install-Module -Name $SelectedModule -Force -Scope CurrentUser -ErrorAction Stop
+                Install-Module -Name $SelectedModule -Force -Scope CurrentUser -AllowClobber -ErrorAction Stop
                 #GEt user SID
                 $UserInfo = Get-LoggedOnUser -Passthru
                 #$OneDrivePath = Get-ItemProperty -Path "HKCU:\Software\Microsoft\OneDrive\Accounts\Business1" -Name "UserFolder" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty UserFolder
@@ -3491,7 +3491,7 @@ If($Global:UI.OutputData.SelectedModules.count -gt 0)
         ElseIf($Global:UI.OutputData.PS7install){
             Write-LogEntry -Message "Installing for PowerShell 7 under context [$InstallContext]" -Source 'Installer' -Severity 0
             Try{
-                & pwsh -NoProfile -Command "Install-Module -Name $SelectedModule -Scope $InstallContext -Force"
+                & pwsh -NoProfile -Command "Install-Module -Name $SelectedModule -Scope $InstallContext -AllowClobber -Force"
             }
             catch {
                 Write-LogEntry -Message ("Failed to install module [{0}] for PowerShell 7: {1}" -f $SelectedModule,$_.Exception.Message) -Source 'Installer' -Severity 3
@@ -3499,7 +3499,7 @@ If($Global:UI.OutputData.SelectedModules.count -gt 0)
         }Else{
             Write-LogEntry -Message "Installing for Windows PowerShell 5.1 under context [$InstallContext]" -Source 'Installer' -Severity 0
             Try{
-                Install-Module -Name $SelectedModule -Force -Scope $InstallContext -ErrorAction Stop
+                Install-Module -Name $SelectedModule -Force -Scope $InstallContext -AllowClobber -ErrorAction Stop
             }
             catch {
                 Write-LogEntry -Message ("Failed to install module [{0}] for Windows PowerShell 5.1: {1}" -f $SelectedModule,$_.Exception.Message) -Source 'Installer' -Severity 3
