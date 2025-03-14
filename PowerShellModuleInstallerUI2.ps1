@@ -24,6 +24,7 @@ param(
 )
 
 
+
 ##*=============================================
 ##*  FUNCTION
 ##*=============================================
@@ -2960,6 +2961,12 @@ Function Get-ScriptPath {
 ##* VARIABLES
 ##*=============================================
 #[string]$scriptPath = ($PWD.ProviderPath, $PSScriptRoot)[[bool]$PSScriptRoot]
+If(!Test-IsISE){
+    # Make PowerShell Disappear 
+    $windowcode = '[DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);' 
+    $asyncwindow = Add-Type -MemberDefinition $windowcode -name Win32ShowWindowAsync -namespace Win32Functions -PassThru 
+    $null = $asyncwindow::ShowWindowAsync((Get-Process -PID $pid).MainWindowHandle, 0)
+}
 
 #build log name
 [string]$scriptFullPath = Get-ScriptPath
@@ -2986,6 +2993,9 @@ $UIConfig = Get-Content $ConfigFilePath | ConvertFrom-Json
 Write-LogEntry -Message "Loading UI Config file: $ConfigFilePath" -Source $MyInvocation.MyCommand.Name -Severity 1
 
 $CurrentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+
+#Update Powershellget
+Install-PackageProvider -Name Nuget -ForceBootstrap -RequiredVersion '2.8.5.201' -Scope $UIConfig.DefaultSettings.InstallMode -Force | Out-Null
 
 #set the data stored path
 If($StoredDataPath){
@@ -3296,7 +3306,6 @@ If($TotalSteps -le 1){
     Close-SequenceWindow -Runspace $Global:installSequence
     Exit 0
 }
-
 
 Write-LogEntry -Message ("Starting module install sequence...") -Source $MyInvocation.MyCommand.Name -Severity 1
 
