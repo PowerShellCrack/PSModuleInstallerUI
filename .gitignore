@@ -6,7 +6,7 @@
 !/Logs/
 /Logs/*
 
-*.test.xml
+*.xml
 *.tests.ps1
 
 Thumbs.db
