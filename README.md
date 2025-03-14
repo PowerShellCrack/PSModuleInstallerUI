@@ -29,7 +29,7 @@ For a packaged app, it is recommended to run the following commands:
 
 For Install:
 ```cmd
-C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File .\PowerShellModuleInstallerUI2.ps1 -StoredDataPath "C:\ProgramData\Company\PSModuleInstallerData" -LogFilePath "C:\ProgramData\Company\PowershellInstallModule.Log" -TagDetectionPath "C:\ProgramData\Company"
+C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File .\PowerShellModuleInstallerUI2.ps1 -StoredDataPath "C:\ProgramData\Company\PSModuleInstallerData" -LogFilePath "C:\ProgramData\Company" -TagDetectionPath "C:\ProgramData\Company"
 ```
 
 For uninstall
@@ -46,7 +46,7 @@ For Detection (update variables in script)
 > The commands above are for _USER CONTEXT_ only! If you deploy this UI using _SYSTEM CONTEXT_, you must use the _ServiceUI_x64.exe_
 
 ```cmd
-ServiceUI_x64.exe -process:explorer.exe C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File .\PowerShellModuleInstallerUI2.ps1 -StoredDataPath "C:\ProgramData\Company\PSModuleInstallerData" -LogFilePath "C:\ProgramData\Company\PowershellInstallModule.Log" -TagDetectionPath "C:\ProgramData\Company"
+ServiceUI_x64.exe -process:explorer.exe C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File .\PowerShellModuleInstallerUI2.ps1 -StoredDataPath "C:\ProgramData\Company\PSModuleInstallerData" -LogFilePath "C:\ProgramData\Company" -TagDetectionPath "C:\ProgramData\Company"
 ```
 
 ## Why use this?
