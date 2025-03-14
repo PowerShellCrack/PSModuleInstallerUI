@@ -82,7 +82,8 @@ Function Show-SequenceWindow {
         Title="MainWindow" Height="768" Width="1366"
         ResizeMode="NoResize" WindowStyle="None"
         BorderBrush="#0071B7"
-        BorderThickness="0.5">
+        BorderThickness="0.5"
+        ShowInTaskbar="False">
     <Window.Resources>
 
     </Window.Resources>
@@ -453,7 +454,8 @@ Function Show-UIMainWindow
         Title="MainWindow" Height="768" Width="1366"
         ResizeMode="NoResize" WindowStyle="None"
         BorderBrush="#0071B7"
-        BorderThickness="0.5">
+        BorderThickness="0.5"
+        ShowInTaskbar="False">
     <Window.Resources>
         <ResourceDictionary>
             <Color x:Key="ControlLightColor">Gray</Color>
@@ -2961,12 +2963,7 @@ Function Get-ScriptPath {
 ##* VARIABLES
 ##*=============================================
 #[string]$scriptPath = ($PWD.ProviderPath, $PSScriptRoot)[[bool]$PSScriptRoot]
-If(!Test-IsISE){
-    # Make PowerShell Disappear 
-    $windowcode = '[DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);' 
-    $asyncwindow = Add-Type -MemberDefinition $windowcode -name Win32ShowWindowAsync -namespace Win32Functions -PassThru 
-    $null = $asyncwindow::ShowWindowAsync((Get-Process -PID $pid).MainWindowHandle, 0)
-}
+
 
 #build log name
 [string]$scriptFullPath = Get-ScriptPath
@@ -2981,21 +2978,27 @@ If(Test-Path $scriptFullPath -PathType Leaf ){
 $FileName = "$($scriptName)_$(Get-Date -Format 'yyyy-MM-dd_Thh-mm-ss-tt').log"
 #build global log fullpath
 If($LogFilePath){
-    $LogFilePath = $LogFilePath
+    $LogFileFullPath = Join-Path $LogFileFullPath -ChildPath $FileName
 }else{
-    $LogFilePath = Join-Path "$scriptPath\Logs" -ChildPath $FileName
+    $LogFileFullPath = Join-Path "$scriptPath\Logs" -ChildPath $FileName
 }
-New-Item -Path (Split-Path $LogFilePath -Parent) -ItemType Directory -ErrorAction SilentlyContinue | Out-Null
-Write-Host "logging to file: $LogFilePath" -ForegroundColor Cyan
+New-Item -Path (Split-Path $LogFileFullPath -Parent) -ItemType Directory -ErrorAction SilentlyContinue | Out-Null
+Write-Host "logging to file: $LogFileFullPath" -ForegroundColor Cyan
 
 $ConfigFilePath = "$scriptPath\UIConfig.json"
 $UIConfig = Get-Content $ConfigFilePath | ConvertFrom-Json
 Write-LogEntry -Message "Loading UI Config file: $ConfigFilePath" -Source $MyInvocation.MyCommand.Name -Severity 1
 
+#get current user
 $CurrentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 
-#Update Powershellget
-Install-PackageProvider -Name Nuget -ForceBootstrap -RequiredVersion '2.8.5.201' -Scope $UIConfig.DefaultSettings.InstallMode -Force | Out-Null
+#Update Powershellget (running in 5.1)
+If($PSVersionTable.PSVersion.Major -eq 5){
+    Write-LogEntry -Message "Updating PowershellGet" -Source $MyInvocation.MyCommand.Name -Severity 1
+    #set TLS 1.2 for powershellget update
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    Install-PackageProvider -Name Nuget -ForceBootstrap -RequiredVersion '2.8.5.201' -Scope $UIConfig.DefaultSettings.InstallMode -Force | Out-Null
+}
 
 #set the data stored path
 If($StoredDataPath){
@@ -3014,6 +3017,13 @@ $TabItemData = @()
 $TabControlXaml = @()
 $AllModuleData = @()
 $AllSolutionData = @()
+
+If(-not(Test-IsISE)){
+    # Make PowerShell Disappear 
+    $windowcode = '[DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);' 
+    $asyncwindow = Add-Type -MemberDefinition $windowcode -name Win32ShowWindowAsync -namespace Win32Functions -PassThru 
+    $null = $asyncwindow::ShowWindowAsync((Get-Process -PID $pid).MainWindowHandle, 0)
+}
 ##*=============================================
 ##* BUILD UI
 ##*=============================================
@@ -3203,7 +3213,7 @@ $Global:UI = Show-UIMainWindow `
                 -ModuleData $AllModuleData `
                 -SolutionData $AllSolutionData `
                 -InstalledModules $InstalledModules `
-                -LogPath ($LogFilePath -replace "\.log$","_UI.log") `
+                -LogPath ($LogFileFullPath -replace "\.log$","_UI.log") `
                 -TopPosition $Global:BuildSequence.Window.Top `
                 -LeftPosition $Global:BuildSequence.Window.Left `
                 -DisableProcessCheck:$DisableProcessKill `
