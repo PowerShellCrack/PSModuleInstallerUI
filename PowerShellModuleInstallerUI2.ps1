@@ -3595,8 +3595,8 @@ Close-SequenceWindow -Runspace $Global:installSequence
 If($TagDetectionPath){
     $TagName = $UIconfig.Title -replace '\W+',''
     $TagVersion = $UIconfig.Version
-    $TagFullPath = "$TagDetectionPath\$TagName\$TagName.$TagVersion.tag"
-    New-Item -Path "$TagDetectionPath\$TagName" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
+    $TagFullPath = "$TagDetectionPath\$TagName.$TagVersion.tag"
+    New-Item -Path $TagDetectionPath -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
     #remove old tag
     Get-ChildItem -Path $TagFullPath -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
     Set-Content -Path $TagFullPath -Value $Global:UI.OutputData.SelectedModules -Force
