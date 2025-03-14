@@ -5,7 +5,8 @@
 *.zip
 !/Logs/
 /Logs/*
-
+/Tests/
+/Tests/*
 *.xml
 *.tests.ps1
 
