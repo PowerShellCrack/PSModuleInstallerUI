@@ -1455,18 +1455,17 @@ Function Show-UIMainWindow
             $PwshVersion = (Test-PwshInstalled -Passthru).Version.ToString()
             $syncHash.chkModuleInstallForPS7.Visibility = 'Visible'
             Write-UILogEntry -Message ("PowerShell {0} is installed" -f $PwshVersion) -Source 'Show-UIMainWindow' -Severity 0
+
+            #Check verision of powershell runnning app, check the box 
+            If($PSVersionTable.PSVersion.Major -gt 5){
+                $syncHash.chkModuleInstallForPS7.IsChecked = $true
+            }Else{
+                $syncHash.chkModuleInstallForPS7.IsChecked = $false
+            }
         }Else{
             $syncHash.chkModuleInstallForPS7.Visibility = 'Hidden'
             Write-UILogEntry -Message "PowerShell 7* is not installed" -Source 'Show-UIMainWindow' -Severity 0
         }
-
-        #Check verision of powershell runnning app, check the box 
-        If($PSVersionTable.PSVersion.Major -gt 5){
-            $syncHash.chkModuleInstallForPS7.IsChecked = $true
-        }Else{
-            $syncHash.chkModuleInstallForPS7.IsChecked = $false
-        }
-        
 
         #update all comboboxes
         $syncHash.Keys | Where-Object { $_ -match "^cmb[A-Z][a-zA-Z]+ModuleStatusType$" } | ForEach-Object {
