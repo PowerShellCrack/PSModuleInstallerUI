@@ -1461,7 +1461,7 @@ Function Show-UIMainWindow
         }
 
         #Check verision of powershell runnning app, check the box 
-        If($PSVersionTable.PSVersion.Major -ge 5){
+        If($PSVersionTable.PSVersion.Major -gt 5){
             $syncHash.chkModuleInstallForPS7.IsChecked = $true
         }Else{
             $syncHash.chkModuleInstallForPS7.IsChecked = $false
