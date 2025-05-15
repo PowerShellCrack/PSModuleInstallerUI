@@ -2,11 +2,12 @@
     "Title": "PowerShell Module Installer",
     "Version": "2.3.0",
     "DefaultSettings": {
-        "PowerShellVersion": "5.1",
+        "PowerShellVersionSupport": ["5.1","7.*"],
         "AutoUpdate": "True",
         "RemoveDuplicates": "True",
         "RemoveAllModulesFirst": "False",
         "AllowUserContextInstall": "True",
+        "ShowPwshSelection": "False",
         "InstallMode": "CurrentUser",
         "UseExternalInstaller": "False",
         "SkipPoshProcessCheck": "False"

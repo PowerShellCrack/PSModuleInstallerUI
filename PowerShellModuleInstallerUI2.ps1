@@ -1413,6 +1413,7 @@ Function Show-UIMainWindow
         $syncHash.chkModuleAutoUpdate.isChecked = [Boolean]::Parse($syncHash.Config.DefaultSettings.AutoUpdate)
         $syncHash.chkModuleRemoveDuplicates.isChecked = [Boolean]::Parse($syncHash.Config.DefaultSettings.RemoveDuplicates)
         $syncHash.chkModuleRemoveAll.isChecked = [Boolean]::Parse($syncHash.Config.DefaultSettings.RemoveAllModulesFirst)
+        $ShowPwshSelection = [Boolean]::Parse($syncHash.Config.DefaultSettings.ShowPwshSelection)
 
         If([Boolean]::Parse($syncHash.Config.DefaultSettings.AllowUserContextInstall)){
             $syncHash.chkModuleInstallUserContext.Visibility = 'Visible'
@@ -1451,20 +1452,25 @@ Function Show-UIMainWindow
             $syncHash.chkModuleInstallUserContext.IsEnabled = $true
         }
 
-        If(Test-PwshInstalled){
-            $PwshVersion = (Test-PwshInstalled -Passthru).Version.ToString()
-            $syncHash.chkModuleInstallForPS7.Visibility = 'Visible'
-            Write-UILogEntry -Message ("PowerShell {0} is installed" -f $PwshVersion) -Source 'Show-UIMainWindow' -Severity 0
-
-            #Check verision of powershell runnning app, check the box 
-            If($PSVersionTable.PSVersion.Major -gt 5){
-                $syncHash.chkModuleInstallForPS7.IsChecked = $true
+        If($ShowPwshSelection){
+            If(Test-PwshInstalled){
+                $PwshVersion = (Test-PwshInstalled -Passthru).Version.ToString()
+                $syncHash.chkModuleInstallForPS7.Visibility = 'Visible'
+                Write-UILogEntry -Message ("PowerShell {0} is installed" -f $PwshVersion) -Source 'Show-UIMainWindow' -Severity 0
             }Else{
-                $syncHash.chkModuleInstallForPS7.IsChecked = $false
+                $syncHash.chkModuleInstallForPS7.Visibility = 'Hidden'
+                Write-UILogEntry -Message "PowerShell 7* is not installed" -Source 'Show-UIMainWindow' -Severity 0
             }
         }Else{
             $syncHash.chkModuleInstallForPS7.Visibility = 'Hidden'
-            Write-UILogEntry -Message "PowerShell 7* is not installed" -Source 'Show-UIMainWindow' -Severity 0
+            Write-UILogEntry -Message "PowerShell Selection disabled" -Source 'Show-UIMainWindow' -Severity 0
+        }
+
+        #Even though selection is hidden, we still need to set the checkbox appropriately
+        If($PSVersionTable.PSVersion.Major -gt 5){
+            $syncHash.chkModuleInstallForPS7.IsChecked = $true
+        }Else{
+            $syncHash.chkModuleInstallForPS7.IsChecked = $false
         }
 
         #update all comboboxes
