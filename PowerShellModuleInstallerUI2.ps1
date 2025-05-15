@@ -1089,7 +1089,7 @@ Function Show-UIMainWindow
 
             if ($runningPS.count -gt 0) {
                 # Prompt user with XAML Popup
-                $msg = ("There are {0} applications currently running that will be closed." -f $runningPS.count)
+                $msg = ("There are {0} powershell based applications running that need to be closed." -f $runningPS.count)
                 $continue = Show-UIConfirmationPopup -Message $msg
 
                 if ($continue.Decision) {
@@ -1099,8 +1099,10 @@ Function Show-UIMainWindow
                 } else {
                     return $false
                 }
+            }else{
+                # No running PowerShell instances found, return true
+                return $true
             }
-            return $continue.Decision
         }
 
         Function Write-UILogEntry{
@@ -1457,6 +1459,14 @@ Function Show-UIMainWindow
             $syncHash.chkModuleInstallForPS7.Visibility = 'Hidden'
             Write-UILogEntry -Message "PowerShell 7* is not installed" -Source 'Show-UIMainWindow' -Severity 0
         }
+
+        #Check verision of powershell runnning app, check the box 
+        If($PSVersionTable.PSVersion.Major -ge 5){
+            $syncHash.chkModuleInstallForPS7.IsChecked = $true
+        }Else{
+            $syncHash.chkModuleInstallForPS7.IsChecked = $false
+        }
+        
 
         #update all comboboxes
         $syncHash.Keys | Where-Object { $_ -match "^cmb[A-Z][a-zA-Z]+ModuleStatusType$" } | ForEach-Object {
@@ -2602,7 +2612,7 @@ Function Write-LogEntry{
 
         [parameter(Mandatory=$false, HelpMessage="Name of the log file that the entry will written to.")]
         [ValidateNotNullOrEmpty()]
-        [string]$OutputLogFile = $LogFilePath
+        [string]$OutputLogFile = $LogFileFullPath
     )
     ## Get the name of this function
     #[string]${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name
@@ -2654,7 +2664,7 @@ Function Write-LogEntry{
             Out-File -InputObject $LogFormat -Append -NoClobber -Encoding Default -FilePath $OutputLogFile -ErrorAction Stop
         }
         catch {
-            Write-Host ("[{0}] [{1}] :: Unable to append log entry to [{1}], error: {2}" -f $LogTimePlusBias,$ScriptSource,$OutputLogFile,$_.Exception.ErrorMessage) -ForegroundColor Red
+            Write-Host ("[{0}] [{1}] :: Unable to append log entry to [{1}], error: {2}" -f $LogTimePlusBias,$ScriptSource,$OutputLogFile,$_.Exception.Message) -ForegroundColor Red
         }
     }
 
@@ -2737,12 +2747,94 @@ Function Get-UserModulePath{
 }
 
 
-Function Get-UserInstalledModule {
+Function Get-PSModuleFolderPaths{
+    Param([switch]$Passthru)
+    $LoggedOnUser = Get-LoggedOnUser -Passthru
+    $WindowsPowershellOnedrivePath = $LoggedOnUser | Get-UserModulePath -PowershellPath WindowsPowerShell | Where-Object { $SelectedModule -match "OneDrive" } | Select-Object -ExpandProperty FullName
+    $PowershellOnedrivePath = $LoggedOnUser | Get-UserModulePath -PowershellPath PowerShell | Where-Object { $SelectedModule -match "OneDrive" } | Select-Object -ExpandProperty FullName
+
+    $UserModulePath = @(
+        "C:\Users\$($LoggedOnUser.UserName)\Documents\WindowsPowerShell\Modules"
+        "C:\Users\$($LoggedOnUser.UserName)\Documents\PowerShell\Modules"
+    )
+
+    If($WindowsPowershellOnedrivePath){
+        $UserModulePath += $WindowsPowershellOnedrivePath
+    }
+    If($PowershellOnedrivePath){
+        $UserModulePath += $PowershellOnedrivePath
+    }
+
+    $AllUsersPaths = @(
+        'C:\Program Files\WindowsPowerShell\Modules'
+        'C:\Program Files\PowerShell\Modules'
+        'C:\Program Files\PowerShell\7\Modules'
+        'C:\Program Files (x86)\WindowsPowerShell\Modules'
+        'C:\Program Files (x86)\PowerShell\Modules'
+        'C:\Program Files (x86)\PowerShell\7\Modules'
+    )
+
+    $WindowsPath = @(
+        'C:\\Windows\System32\WindowsPowerShell\v1.0\Modules'
+    )
+
+    $SystemProfilePath = @(
+        'C:\Windows\system32\config\systemprofile\Documents\WindowsPowerShell\Modules'
+        'C:\Windows\system32\config\systemprofile\Documents\PowerShell\Modules'
+    )
+
+    #build folder object with two properties: ModulePath and Type (User, AllUsers, Windows, SystemProfile)
+    # Initialize an array to hold the module paths with their types
+    $ModuleFolders = @()
+
+    # Add User module paths
+    foreach ($path in $UserModulePath) {
+        $ModuleFolders += [PSCustomObject]@{
+            ModulePath = $path
+            Type       = 'User'
+        }
+    }
+
+    # Add AllUsers module paths
+    foreach ($path in $AllUsersPaths) {
+        $ModuleFolders += [PSCustomObject]@{
+            ModulePath = $path
+            Type       = 'AllUsers'
+        }
+    }
+
+    <#
+    # Add Windows module paths
+    foreach ($path in $WindowsPath) {
+        $ModuleFolders += [PSCustomObject]@{
+            ModulePath = $path
+            Type       = 'Windows'
+        }
+    }
+    #>
+
+    # Add SystemProfile module paths
+    foreach ($path in $SystemProfilePath) {
+        $ModuleFolders += [PSCustomObject]@{
+            ModulePath = $path
+            Type       = 'SystemProfile'
+        }
+    }
+
+    # Output the result
+    If($Passthru){
+        return ($ModuleFolders | Select-Object -ExpandProperty ModulePath)
+    }Else{
+        return $ModuleFolders
+    }
+}
+
+Function Get-PSModuleInstalledFolders {
     Param(
-        [Parameter(Mandatory=$true, ValueFromPipeline=$true)]
+        [Parameter(Mandatory=$true, ValueFromPipeline=$true, ValueFromPipelineByPropertyName=$true)]
         [string[]]$ModulePath,
-        [switch]$GetDetails,
-        [switch]$PassThru # New switch to return all versions
+        [string[]]$ExcludedFolders,
+        [switch]$AllVersions # New switch to return all versions
     )
 
     Begin {
@@ -2754,7 +2846,11 @@ Function Get-UserInstalledModule {
                 Write-LogEntry -Message "Searching for modules in [$Path]" -Source $MyInvocation.MyCommand.Name -Severity 1 -Verbose
 
                 # Get module names (first-level folders inside $ModulePath)
-                $ModuleFolders = Get-ChildItem -Path $Path -Directory
+                $ModuleFolders = Get-ChildItem -Path $Path -Directory |
+                                 Where-Object { $_.Name -notin $ExcludedFolders } # Exclude specified folders
+
+                # Determine the type of module folder (User, AllUsers, Windows, SystemProfile)
+                $ModuleFolderType = Get-PSModuleFolderPaths | Where-Object { $_.ModulePath -eq $Path } | Select-Object -ExpandProperty Type
 
                 Foreach ($Module in $ModuleFolders) {
                     # Get available versions (subfolders inside the module folder)
@@ -2766,7 +2862,7 @@ Function Get-UserInstalledModule {
                         $SortedVersions = $Versions | Sort-Object { [version]$_.Name } -Descending
 
                         # Determine which versions to return
-                        $SelectedVersions = If ($PassThru) { $SortedVersions } Else { $SortedVersions | Select-Object -First 1 }
+                        $SelectedVersions = If ($AllVersions) { $SortedVersions } Else { $SortedVersions | Select-Object -First 1 }
 
                         Foreach ($Version in $SelectedVersions) {
                             $ModuleName = $Module.Name
@@ -2774,33 +2870,31 @@ Function Get-UserInstalledModule {
 
                             Write-LogEntry -Message ("Processing module [{0}] Version [{1}]" -f $ModuleName, $ModuleVersion) -Source $MyInvocation.MyCommand.Name -Severity 1 -Verbose
 
+                            <#
                             # Skip duplicates (same module & version in different paths)
                             If ($InstalledModules | Where-Object { $_.Name -eq $ModuleName -and $_.Version -eq $ModuleVersion }) {
                                 Write-LogEntry -Message ("Skipping duplicate module [{0}] Version [{1}]" -f $ModuleName, $ModuleVersion) -Source $MyInvocation.MyCommand.Name -Severity 1 -Verbose
                                 Continue
                             }
+                            #>
+                            
+                            Write-LogEntry -Message ("Getting details for module: [{0}] Version: [{1}]" -f $ModuleName, $ModuleVersion) -Source $MyInvocation.MyCommand.Name -Severity 1 -Verbose
+                            #$ModuleDetails = Find-Module -Name $ModuleName -RequiredVersion $ModuleVersion -Repository PSGallery -ErrorAction SilentlyContinue | Select-Object Version, Name, Repository, Description, Author, CompanyName, Dependencies
+                            $ModuleDetails = Get-PSModuleFolderManifest -Path $Versions
+                            
 
-                            If ($GetDetails) {
-                                Write-LogEntry -Message ("Getting details for module: [{0}] Version: [{1}]" -f $ModuleName, $ModuleVersion) -Source $MyInvocation.MyCommand.Name -Severity 1 -Verbose
-                                $ModuleDetails = Find-Module -Name $ModuleName -RequiredVersion $ModuleVersion -Repository PSGallery -ErrorAction SilentlyContinue | Select-Object Version, Name, Repository, Description, Author, CompanyName, Dependencies
-
-                                $InstalledModules += [PSCustomObject]@{
-                                    Version = $ModuleVersion
-                                    Name = $ModuleName
-                                    Repository = $ModuleDetails.Repository
-                                    Description = $ModuleDetails.Description
-                                    Author = $ModuleDetails.Author
-                                    CompanyName = $ModuleDetails.CompanyName
-                                    Dependencies = $ModuleDetails.Dependencies
-                                    InstalledLocation = $Path
-                                }
-                            } Else {
-                                $InstalledModules += [PSCustomObject]@{
-                                    Version = $ModuleVersion
-                                    Name = $ModuleName
-                                    InstalledLocation = ($Path + "\" + $ModuleName + "\" + $ModuleVersion)
-                                }
+                            $InstalledModules += [PSCustomObject]@{
+                                Version = $ModuleVersion
+                                Name = $ModuleName
+                                Repository = $ModuleDetails.Repository
+                                Description = $ModuleDetails.Description
+                                Author = $ModuleDetails.Author
+                                CompanyName = $ModuleDetails.CompanyName
+                                Dependencies = $ModuleDetails.Dependencies
+                                InstalledLocation = $Path + "\" + $ModuleName + "\" + $ModuleVersion
+                                InstallerType = $ModuleFolderType
                             }
+                            
                         }
                     }
                 }
@@ -2812,44 +2906,123 @@ Function Get-UserInstalledModule {
     }
 }
 
+
+
+Function Get-PSModuleFolderManifest{
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+        [string[]]$Path
+    )
+    
+    begin{
+        $ModuleManifest = @()
+    }
+    process{
+        Foreach($FolderPath in $Path)
+        {
+            # Get the module manifest file in the specified path
+            $ManifestFile = Get-ChildItem $FolderPath -Filter *.psd1 | Select-Object -First 1
+            
+            If(Test-Path "$FolderPath\PSGetModuleInfo.xml")
+            {
+                #this should exist if module was downloaded from the gallery
+                Write-LogEntry -Message "Reading module data file: $($FolderPath)\PSGetModuleInfo.xml" -Source $MyInvocation.MyCommand.Name -Severity 1 -Verbose
+                $ModuleManifest += Import-Clixml -Path "$FolderPath\PSGetModuleInfo.xml"
+            }ElseIf(Test-Path $ManifestFile.FullName)
+            {
+                # otherwise read the manifest file
+                Write-LogEntry -Message "Reading module manifest: $($ManifestFile.FullName)" -Source $MyInvocation.MyCommand.Name -Severity 1 -Verbose
+                $ModuleManifest += Import-PowerShellDataFile -Path $ManifestFile.FullName
+            }Else
+            {
+                Write-LogEntry -Message "No module manifest found in path: $($Path)" -Source $MyInvocation.MyCommand.Name -Severity 1 -Verbose
+            }
+        }
+    }
+    end{
+        return $ModuleManifest
+    }
+}
+
 Function Get-AllModules{
+
     $isAdmin = [bool](([System.Security.Principal.WindowsPrincipal][System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole] "Administrator"))
 
     $ModuleList = Get-Module -ListAvailable
-
-    $ExludeModules = @(
+    $ModuleFolders = Get-PSModuleFolderPaths -Passthru
+    
+    $ExcludedModules = @(
         'PackageManagement'
         'Pester'
         'PowerShellGet'
         'PSReadLine'
     )
 
-    #iif not an admin no need to get modules in all users:
-    $ExludeAllUsersPaths = @(
-        'C:\\Program Files\\WindowsPowerShell\\Modules'
-        'C:\\Program Files\\PowerShell\\Modules'
-        'C:\\Program Files\\PowerShell\\7\\Modules'
-        'C:\\Program Files \(x86\)\\WindowsPowerShell\\Modules'
-        'C:\\Program Files \(x86\)\\PowerShell\\Modules'
-        'C:\\Program Files \(x86\)\\PowerShell\\7\\Modules'
-        'C:\\Program Files\\PowerShell\\Modules'
-    )
-
-    $SystemPath = @(
-        'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\Modules'
-    )
     #always exclude system path
-    $ModuleList = $ModuleList | Where-Object { $_.Path -notmatch ($SystemPath -join '|') }
+    $ModuleList = $ModuleList | Where-Object { $_.Path -notmatch ($ModuleFolders.WindowsPath -join '|') }
 
     #exclude modules
-    $ModuleList = $ModuleList | Where-Object { $_.Name -notmatch ($ExludeModules -join '|') }
+    $ModuleList = $ModuleList | Where-Object { $_.Name -notmatch ($ExcludedModules -join '|') }
 
     #exclude All Users paths if not admin
     If(-not $isAdmin){
-        $ModuleList = $ModuleList | Where-Object { $_.Path -notmatch ($ExludeAllUsersPaths -join '|') }
+        $ModuleList = $ModuleList | Where-Object { $_.Path -notmatch ($ModuleFolders.UserModulePath -join '|') }
     }
 
     return $ModuleList
+}
+
+
+Function Remove-PSModuleFolder {
+    [CmdletBinding(SupportsShouldProcess=$true)]
+    Param(
+        [Parameter(Mandatory=$true, ValueFromPipeline=$true)]
+        [string[]]$ModulePath
+    )
+
+    Process {
+        Foreach($Path in $ModulePath)
+        {
+            
+            if ($PSCmdlet.ShouldProcess($Path, "Remove-Item"))
+            {
+                Try{
+                    #Write-LogEntry -Message "Removing module folder: $Path" -Source $MyInvocation.MyCommand.Name -Severity 1 -Verbose
+                    Write-Host "Removing module folder: $Path" -ForegroundColor Cyan
+                    Remove-Item -Path $Path -Recurse -Force | Out-Null
+                }Catch{
+                    Write-Host "Failed to remove module folder: $Path. Error: $($_.Exception.Message)" -ForegroundColor Red
+                    #Write-LogEntry -Message "Failed to remove module folder: $Path. Error: $($_.Exception.Message)" -Source $MyInvocation.MyCommand.Name -Severity 3 -Verbose
+                }
+    
+                # Get the parent directory
+                $ParentDir = Split-Path -Path $Path -Parent
+    
+                # Check if the parent directory is empty
+                if (Test-Path $ParentDir -PathType Container)
+                {
+                    $Items = Get-ChildItem -Path $ParentDir
+                    if ($Items.Count -eq 0) {
+                        if ($PSCmdlet.ShouldProcess($ParentDir, "Remove-Item"))
+                        {
+                            Try{
+                                Write-host "Removing empty parent directory: $ParentDir" -ForegroundColor Cyan
+                                #Write-LogEntry -Message "Removing empty parent directory: $ParentDir" -Source $MyInvocation.MyCommand.Name -Severity 1 -Verbose
+                                Remove-Item -Path $ParentDir -Recurse -Force | Out-Null
+                            }Catch{
+                                Write-Host "Failed to remove empty parent directory: $ParentDir. Error: $($_.Exception.Message)" -ForegroundColor Red
+                                #Write-LogEntry -Message "Failed to remove empty parent directory: $ParentDir. Error: $($_.Exception.Message)" -Source $MyInvocation.MyCommand.Name -Severity 3 -Verbose
+                            }
+                        }
+                    }Else{
+                        Write-Host "Parent directory $ParentDir is not empty. Skipping removal." -ForegroundColor Yellow
+                        #Write-LogEntry -Message "Parent directory $ParentDir is not empty. Skipping removal." -Source $MyInvocation.MyCommand.Name -Severity 1 -Verbose
+                    }
+                }
+            }
+        }
+    }    
 }
 
 Function Get-AdditionalDownloadsMapping{
@@ -3024,6 +3197,14 @@ If(-not(Test-IsISE)){
     $asyncwindow = Add-Type -MemberDefinition $windowcode -name Win32ShowWindowAsync -namespace Win32Functions -PassThru 
     $null = $asyncwindow::ShowWindowAsync((Get-Process -PID $pid).MainWindowHandle, 0)
 }
+
+$ExcludedModules = @(
+    'Microsoft.PowerShell.Operation.Validation'
+    'PackageManagement'
+    'Pester'
+    'PowerShellGet'
+    'PSReadLine'
+)
 ##*=============================================
 ##* BUILD UI
 ##*=============================================
@@ -3032,27 +3213,18 @@ Write-Host "====================================================================
 $totalSteps = 7
 $Global:BuildSequence = Show-SequenceWindow -Config $UIConfig -Message "Building Selection UI, please wait..."
 Update-SequenceProgressBar -Runspace $Global:BuildSequence -ProgressBar 'ProgressBarMain' -Indeterminate -Message ("Load data for menu...")
-Write-LogEntry -Message ("Loading UI, please wait...") -Source $MyInvocation.MyCommand.Name -Severity 0
 Start-Sleep 3
 
 Update-SequenceProgressBar -Runspace $Global:BuildSequence -ProgressBar 'ProgressBarMain' -Step 1 -MaxStep $totalSteps
 Update-SequenceProgressBar -Runspace $Global:BuildSequence -ProgressBar 'ProgressBarSub' -Indeterminate -Message ("Retrieving all installed modules on: {0}..." -f $env:Computername)
 Write-LogEntry -Message ("Retrieving all installed modules on: {0}..." -f $env:Computername) -Source $MyInvocation.MyCommand.Name -Severity 0
 #only get installed module:
-$InstalledModules = @()
-#this will get all installed modules (if running under SYSTEM, only modules for SYSTEM will be included)
-#$InstalledModules += Get-InstalledModule | Select Name, Version, Description, Author, CompanyName, InstalledLocation
-$InstalledModules += Get-AllModules |
-        Select Name, Version, Description, Author, CompanyName, @{Name='InstalledLocation';Expression={Split-Path $_.Path -Parent}}
 
-#this will get all modules for the logged on user (even if running under SYSTEM)
-$UserModulePath = Get-LoggedOnUser -Passthru | Get-UserModulePath | Get-UserInstalledModule
-Foreach($UserModule in $UserModulePath){
-    if($UserModule.Name -notin $InstalledModules.Name){
-        Write-LogEntry -Message ("Adding user module: {0}" -f $UserModule.Name) -Source $MyInvocation.MyCommand.Name -Severity 0
-        $InstalledModules += $UserModule
-    }
-}
+
+$InstalledModules = @()
+#this will get all modules for the logged on user, onedrive paths even under SYSTEM profile
+#$InstalledModules += Get-AllModules | Select Name, Version, Description, Author, CompanyName, @{Name='InstalledLocation';Expression={Split-Path $_.Path -Parent}}
+$InstalledModules += Get-PSModuleFolderPaths | Get-PSModuleInstalledFolders -ExcludedFolders $ExcludedModules -AllVersions
 Write-LogEntry -Message ("Found [{0}] installed modules on: {1}" -f $InstalledModules.Count,$env:Computername) -Source $MyInvocation.MyCommand.Name -Severity 0
 
 #build UI for tab items
@@ -3120,7 +3292,7 @@ If($PSBoundParameters.ContainsKey('ForceNewModuleData')){
     If(Test-Path $ModuleDataPath -ErrorAction SilentlyContinue){
         $UseExportedModuleData = $true
         $MockedModuleData = Import-Clixml $ModuleDataPath
-        Write-LogEntry -Message ("Using preloaded module data: {0}" -f $ModuleDataPath) -Source $MyInvocation.MyCommand.Name -Severity 1
+        Write-LogEntry -Message ("Using preloaded module data: {0}" -f $ModuleDataPath) -Source $MyInvocation.MyCommand.Name -Severity 2
         $SourceLocation = 'ExportedModuleData.xml'
     }Else{
         $UseExportedModuleData = $false
@@ -3163,7 +3335,7 @@ If($PSBoundParameters.ContainsKey('ForceNewSolutionData')){
     If(Test-Path $SolutionDataPath -ErrorAction SilentlyContinue){
         $UseExportedSolutionData = $true
         $MockedSolutionData = Import-Clixml $SolutionDataPath
-        Write-LogEntry -Message ("Using preloaded solution data: {0}" -f $SolutionDataPath) -Source $MyInvocation.MyCommand.Name -Severity 1
+        Write-LogEntry -Message ("Using preloaded solution data: {0}" -f $SolutionDataPath) -Source $MyInvocation.MyCommand.Name -Severity 2
         $SourceLocation = 'ExportedSolutionData.xml'
     }Else{
         $UseExportedSolutionData = $false
@@ -3205,7 +3377,7 @@ Close-SequenceWindow -Runspace $Global:BuildSequence
 ##=============================================
 ## LAUNCH SELECTOR UI
 ##=============================================
-Write-Host "Loading UI, please wait..." -ForegroundColor White
+Write-Host "Launching UI..." -ForegroundColor White
 $Global:UI = Show-UIMainWindow `
                 -TabContents $TabControlXaml `
                 -TabElements $TabItemData `
@@ -3286,6 +3458,7 @@ $Global:UI.OutputData = @{
 
 #>
 If($SimulateInstall){$WhatIfPreference = $true}
+
 If($Global:UI.OutputData.PS7install){
     $PowerShellFolderPath = 'PowerShell'
 }else{
@@ -3330,18 +3503,29 @@ If($Global:UI.OutputData.RepairSelected)
     Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarMain' -Step $startStep -MaxStep $totalSteps
     #Repair selected modules
     $i=0
-    foreach($RepairModule in $Global:UI.OutputData.SelectedModules)
+    foreach($SelectedModule in $Global:UI.OutputData.SelectedModules)
     {
         $i++
-        Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxStep $Global:UI.OutputData.SelectedModules.Count -Message "Repairing module [$($RepairModule.Name)]"
-        Write-LogEntry -Message ("Repairing module [{0}]" -f $RepairModule.Name) -Source 'Installer' -Severity 0
+        Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxStep $Global:UI.OutputData.SelectedModules.Count -Message "Repairing module [$SelectedModule]"
+        Write-LogEntry -Message ("Repairing module [{0}]" -f $SelectedModule) -Source 'Repair' -Severity 0
         try {
-            Get-Module -Name $RepairModule.Name -ListAvailable | Remove-Module -Force -ErrorAction Stop
-            Get-Module -Name $RepairModule.Name -ListAvailable | Uninstall-Module -Force -ErrorAction Stop
-            Install-Module -Name $RepairModule.Name -Scope $InstallContext -AllowClobber -Force -ErrorAction Stop
+            #this removes it from being loaded in Powershell session
+            Get-Module -Name $SelectedModule -ListAvailable | Remove-Module -Force -ErrorAction Stop
+            #this attempts to uninstall (remove) the module from the directory its installed in
+            Get-Module -Name $SelectedModule -ListAvailable | Uninstall-Module -Force -ErrorAction Stop
         }
         catch {
-            Write-LogEntry -Message ("Failed to repair module [{0}]: {1}" -f $RepairModule.Name,$_.Exception.Message) -Source 'Installer' -Severity 3
+            $InstalledModules | Where-Object { $_.Name -eq $SelectedModule} | Remove-PSModuleFolder
+
+            Write-LogEntry -Message ("Failed to remove module [{0}]: {1}" -f $SelectedModule,$_.Exception.Message) -Source 'Repair' -Severity 3
+        }
+
+        try {
+            #this installs the module from the PowerShell Gallery
+            Install-Module -Name $SelectedModule -Scope $InstallContext -AllowClobber -Force -ErrorAction Stop
+        }
+        catch {
+            Write-LogEntry -Message ("Failed to install module [{0}]: {1}" -f $SelectedModule,$_.Exception.Message) -Source 'Repair' -Severity 3
         }
     }
 }
