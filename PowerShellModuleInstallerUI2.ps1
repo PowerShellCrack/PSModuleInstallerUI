@@ -2859,12 +2859,12 @@ Function Get-PSModuleInstalledFolders {
 
                 Foreach ($Module in $ModuleFolders) {
                     # Get available versions (subfolders inside the module folder)
-                    $Versions = Get-ChildItem -Path $Module.FullName -Directory |
+                    $VersionsPaths = Get-ChildItem -Path $Module.FullName -Directory |
                                 Where-Object { $_.Name -match '^\d+(\.\d+)*$' } # Ensure it's a version number
 
-                    If ($Versions) {
+                    If ($VersionsPaths) {
                         # Sort versions numerically (latest first)
-                        $SortedVersions = $Versions | Sort-Object { [version]$_.Name } -Descending
+                        $SortedVersions = $VersionsPaths | Sort-Object { [version]$_.Name } -Descending
 
                         # Determine which versions to return
                         $SelectedVersions = If ($AllVersions) { $SortedVersions } Else { $SortedVersions | Select-Object -First 1 }
@@ -2885,7 +2885,7 @@ Function Get-PSModuleInstalledFolders {
                             
                             Write-LogEntry -Message ("Getting details for module: [{0}] Version: [{1}]" -f $ModuleName, $ModuleVersion) -Source $MyInvocation.MyCommand.Name -Severity 1 -Verbose
                             #$ModuleDetails = Find-Module -Name $ModuleName -RequiredVersion $ModuleVersion -Repository PSGallery -ErrorAction SilentlyContinue | Select-Object Version, Name, Repository, Description, Author, CompanyName, Dependencies
-                            $ModuleDetails = Get-PSModuleFolderManifest -Path $Versions
+                            $ModuleDetails = Get-PSModuleFolderManifest -Path $VersionsPaths.FullName
                             
 
                             $InstalledModules += [PSCustomObject]@{
@@ -3156,9 +3156,9 @@ If(Test-Path $scriptFullPath -PathType Leaf ){
 $FileName = "$($scriptName)_$(Get-Date -Format 'yyyy-MM-dd_Thh-mm-ss-tt').log"
 #build global log fullpath
 If($LogFilePath){
-    $LogFileFullPath = Join-Path $LogFileFullPath -ChildPath $FileName
+    $LogFileFullPath = Join-Path $LogFilePath -ChildPath $FileName
 }else{
-    $LogFileFullPath = Join-Path "$scriptPath\Logs" -ChildPath $FileName
+    $LogFileFullPath = Join-Path "$env:Temp" -ChildPath $FileName
 }
 New-Item -Path (Split-Path $LogFileFullPath -Parent) -ItemType Directory -ErrorAction SilentlyContinue | Out-Null
 Write-Host "logging to file: $LogFileFullPath" -ForegroundColor Cyan
@@ -3186,8 +3186,8 @@ If($StoredDataPath){
     $SolutionDataPath = "$StoredDataPath\ExportedSolutionData.xml"
 }else{
     Write-LogEntry -Message "Using default data path: $scriptPath" -Source $MyInvocation.MyCommand.Name -Severity 1
-    $ModuleDataPath = "$scriptPath\ExportedModuleData.xml"
-    $SolutionDataPath = "$scriptPath\ExportedSolutionData.xml"
+    $ModuleDataPath = "$env:Temp\ExportedModuleData.xml"
+    $SolutionDataPath = "$env:Temp\ExportedSolutionData.xml"
 }
 
 #build array
@@ -3209,6 +3209,7 @@ $ExcludedModules = @(
     'Pester'
     'PowerShellGet'
     'PSReadLine'
+    'SQLite'
 )
 ##*=============================================
 ##* BUILD UI
@@ -3504,7 +3505,7 @@ Start-Sleep 2
 If($Global:UI.OutputData.RepairSelected)
 {
     $startStep++
-    Write-LogEntry -Message ("[{0} of {1}] Repairing selected modules" -f $startStep,$totalSteps) -Source 'Installer' -Severity 0
+    Write-LogEntry -Message ("[{0} of {1}] Repairing selected modules" -f $startStep,$totalSteps) -Source 'RepairModules' -Severity 0
     Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarMain' -Step $startStep -MaxStep $totalSteps
     #Repair selected modules
     $i=0
@@ -3542,7 +3543,7 @@ $RemovedModules = @()
 If($Global:UI.OutputData.RemoveAll)
 {
     $startStep++
-    Write-LogEntry -Message ("[{0} of {1}] Removing all modules (except selected)" -f $startStep,$totalSteps) -Source 'Installer' -Severity 0
+    Write-LogEntry -Message ("[{0} of {1}] Removing all modules (except selected)" -f $startStep,$totalSteps) -Source 'RemoveModules' -Severity 0
     Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarMain' -Step $startStep -MaxStep $totalSteps
     #remove all modules
     $i=0
@@ -3553,7 +3554,7 @@ If($Global:UI.OutputData.RemoveAll)
         $i++
         Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxStep $maxCount -Message "Removing module [$($RemoveModule.Name)]"
         If($Global:UI.OutputData.SelectedModules -contains $RemoveModule.Name){
-            Write-LogEntry -Message ("Module [{0}] was selected, skipping removal" -f $RemoveModule.Name) -Source 'Installer' -Severity 0
+            Write-LogEntry -Message ("Module [{0}] was selected, skipping removal" -f $RemoveModule.Name) -Source 'RemoveModules' -Severity 0
         }Else{
             Write-LogEntry -Message ("Removing module [{0}]" -f $RemoveModule.Name) -Source 'btnInstall' -Severity 0
             try {
@@ -3562,7 +3563,7 @@ If($Global:UI.OutputData.RemoveAll)
                 $RemovedModules += $RemoveModule.Name
             }
             catch {
-                Write-LogEntry -Message ("Failed to remove module [{0}]: {1}" -f $RemoveModule.Name,$_.Exception.Message) -Source 'Installer' -Severity 3
+                Write-LogEntry -Message ("Failed to remove module [{0}]: {1}" -f $RemoveModule.Name,$_.Exception.Message) -Source 'RemoveModules' -Severity 3
             }
         }
     }
@@ -3575,7 +3576,7 @@ If($Global:UI.OutputData.AutoUpdate)
 {
     $startStep++
     #update all modules
-    Write-LogEntry -Message ("[{0} of {1}] Updating all modules" -f $startStep,$totalSteps) -Source 'Installer' -Severity 0
+    Write-LogEntry -Message ("[{0} of {1}] Updating all modules" -f $startStep,$totalSteps) -Source 'UpdateModules' -Severity 0
     Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarMain' -Step $startStep -MaxStep $totalSteps
     #TODO: Update all modules
     $i=0
@@ -3587,15 +3588,15 @@ If($Global:UI.OutputData.AutoUpdate)
         try {
             #install module if it was removed
             If( ($RemovedModules | Select -Unique) -contains $ModuleUpdate.Name){
-                Write-LogEntry -Message ("Module was recently removed, installing module [{0}]" -f $ModuleUpdate.Name) -Source 'Installer' -Severity 0
+                Write-LogEntry -Message ("Module was recently removed, installing module [{0}]" -f $ModuleUpdate.Name) -Source 'UpdateModules' -Severity 0
                 Install-Module -Name $ModuleUpdate.Name -Scope $InstallContext -AllowClobber -Force -ErrorAction Stop
             }Else{
-                Write-LogEntry -Message ("Updating module [{0}]" -f $ModuleUpdate.Name) -Source 'Installer' -Severity 0
+                Write-LogEntry -Message ("Updating module [{0}]" -f $ModuleUpdate.Name) -Source 'UpdateModules' -Severity 0
                 Update-Module -Name $ModuleUpdate.Name -Scope $InstallContext -Force -ErrorAction Stop
             }
         }
         catch {
-            Write-LogEntry -Message ("Failed to update module [{0}]: {1}" -f $ModuleUpdate.Name,$_.Exception.Message) -Source 'Installer' -Severity 3
+            Write-LogEntry -Message ("Failed to update module [{0}]: {1}" -f $ModuleUpdate.Name,$_.Exception.Message) -Source 'UpdateModules' -Severity 3
         }
     }
 }
@@ -3607,7 +3608,7 @@ If($Global:UI.OutputData.DuplicateCleanup)
 {
     $startStep++
     #Remove duplicate modules
-    Write-LogEntry -Message ("[{0} of {1}] Cleaning up old modules" -f $startStep,$totalSteps) -Source 'Installer' -Severity 0
+    Write-LogEntry -Message ("[{0} of {1}] Cleaning up old modules" -f $startStep,$totalSteps) -Source 'RemoveModules' -Severity 0
     Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarMain' -Step $startStep -MaxStep $totalSteps
     #TODO: Remove duplicate modules. Check if each list has update available are any old versions of modules and remove them.
     $i=0
@@ -3615,7 +3616,7 @@ If($Global:UI.OutputData.DuplicateCleanup)
     {
         $i++
         Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxStep $Global:UI.InstalledModules.Count -Message "Cleaning up module [$($ModuleItem.Name)]"
-        Write-LogEntry -Message ("Cleaning up module [{0}]" -f $ModuleItem.Name) -Source 'Installer' -Severity 0
+        Write-LogEntry -Message ("Cleaning up module [{0}]" -f $ModuleItem.Name) -Source 'RemoveModules' -Severity 0
 
         #get all versions of module
         $ModuleVersions = $Global:UI.InstalledModules | Where Name -eq $ModuleItem.Name
@@ -3626,15 +3627,15 @@ If($Global:UI.OutputData.DuplicateCleanup)
                 #remove all versions except latest
                 Foreach($VersionItem in $ModuleVersions | Where-Object { $ModuleItem -ne $LatestVersion })
                 {
-                    Write-LogEntry -Message ("Cleaning up duplicate module [{0}] version [{1}]" -f $ModuleItem.Name,$VersionItem.Version) -Source 'Installer' -Severity 0
+                    Write-LogEntry -Message ("Cleaning up duplicate module [{0}] version [{1}]" -f $ModuleItem.Name,$VersionItem.Version) -Source 'RemoveModules' -Severity 0
                     Uninstall-Module -Name $ModuleItem.Name -RequiredVersion $VersionItem.Version -Force -ErrorAction Stop
                 }
             }
             catch {
-                Write-LogEntry -Message ("Failed to clean up module [{0}]: {1}" -f $ModuleItem.Name,$_.Exception.Message) -Source 'Installer' -Severity 3
+                Write-LogEntry -Message ("Failed to clean up module [{0}]: {1}" -f $ModuleItem.Name,$_.Exception.Message) -Source 'RemoveModules' -Severity 3
             }
         }Else{
-            Write-LogEntry -Message ("Module [{0}] has only one version, skipping" -f $ModuleItem.Name) -Source 'Installer' -Severity 0
+            Write-LogEntry -Message ("Module [{0}] has only one version, skipping" -f $ModuleItem.Name) -Source 'RemoveModules' -Severity 0
         }
     }
 }
@@ -3646,20 +3647,20 @@ If($Global:UI.OutputData.SelectedModules.count -gt 0)
 {
     $startStep++
     Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarMain' -Step $startStep -MaxStep $totalSteps
-    Write-LogEntry -Message ("Installing {0} selected modules" -f $Global:UI.OutputData.SelectedModules.count) -Source 'Installer' -Severity 0
+    Write-LogEntry -Message ("Installing {0} selected modules" -f $Global:UI.OutputData.SelectedModules.count) -Source 'InstallModules' -Severity 0
     #TODO: Install selected modules
     $i=0
     Foreach($SelectedModule in $Global:UI.OutputData.SelectedModules)
     {
         $i++
         Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxSteps $Global:UI.OutputData.SelectedModules.Count -Message ("Installing module [{0}]" -f $SelectedModule)
-        Write-LogEntry -Message ("Installing module [{0}]" -f $SelectedModule) -Source 'Installer' -Severity 0
+        Write-LogEntry -Message ("Installing module [{0}]" -f $SelectedModule) -Source 'InstallModules' -Severity 0
 
         #install under user context
         If($Global:UI.OutputData.InstallUserContext -and ($CurrentUser -eq "NT AUTHORITY\SYSTEM"))
         {
 
-            Write-LogEntry -Message "Installing under user context while running under SYSTEM..." -Source 'Installer' -Severity 0
+            Write-LogEntry -Message "Installing under user context while running under SYSTEM..." -Source 'InstallModules' -Severity 0
             <#
             Retrieve current user logged in or last user logged in
             when running as SYSTEM; install-Module -Scope CurrentUser points to C:\Windows\System32\config\systemprofile\Documents\WindowsPowerShell\Modules
@@ -3675,7 +3676,7 @@ If($Global:UI.OutputData.SelectedModules.count -gt 0)
                 #$OneDrivePath = Get-ItemProperty -Path "HKCU:\Software\Microsoft\OneDrive\Accounts\Business1" -Name "UserFolder" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty UserFolder
                 $Destination = $UserInfo | Get-UserModulePath -PowershellPath $PowerShellFolderPath | Where-Object { $SelectedModule -match "OneDrive" } | Select-Object -ExpandProperty FullName
                 If(-Not $Destination){
-                    Write-LogEntry -Message "OneDrive path not found" -Source 'Installer' -Severity 2
+                    Write-LogEntry -Message "OneDrive path not found" -Source 'InstallModules' -Severity 2
                     $Destination = $UserInfo | Get-UserModulePath -PowershellPath $PowerShellFolderPath | Select -First 1
                 }
                 #$Source = (Get-InstalledModule Az.Accounts | Select -ExpandProperty InstalledLocation) -replace '\d+\.\d+\.\d+'
@@ -3692,25 +3693,25 @@ If($Global:UI.OutputData.SelectedModules.count -gt 0)
                 Set-Acl -Path $Destination -AclObject $Acl
             }
             catch {
-                Write-LogEntry -Message ("Failed to install module [{0}]: {1}" -f $SelectedModule,$_.Exception.Message) -Source 'Installer' -Severity 3
+                Write-LogEntry -Message ("Failed to install module [{0}]: {1}" -f $SelectedModule,$_.Exception.Message) -Source 'InstallModules' -Severity 3
             }
 
         }
         ElseIf($Global:UI.OutputData.PS7install){
-            Write-LogEntry -Message "Installing for PowerShell 7 under context [$InstallContext]" -Source 'Installer' -Severity 0
+            Write-LogEntry -Message "Installing for PowerShell 7 under context [$InstallContext]" -Source 'InstallModules' -Severity 0
             Try{
                 & pwsh -NoProfile -Command "Install-Module -Name $SelectedModule -Scope $InstallContext -AllowClobber -Force"
             }
             catch {
-                Write-LogEntry -Message ("Failed to install module [{0}] for PowerShell 7: {1}" -f $SelectedModule,$_.Exception.Message) -Source 'Installer' -Severity 3
+                Write-LogEntry -Message ("Failed to install module [{0}] for PowerShell 7: {1}" -f $SelectedModule,$_.Exception.Message) -Source 'InstallModules' -Severity 3
             }
         }Else{
-            Write-LogEntry -Message "Installing for Windows PowerShell 5.1 under context [$InstallContext]" -Source 'Installer' -Severity 0
+            Write-LogEntry -Message "Installing for Windows PowerShell 5.1 under context [$InstallContext]" -Source 'InstallModules' -Severity 0
             Try{
                 Install-Module -Name $SelectedModule -Force -Scope $InstallContext -AllowClobber -ErrorAction Stop
             }
             catch {
-                Write-LogEntry -Message ("Failed to install module [{0}] for Windows PowerShell 5.1: {1}" -f $SelectedModule,$_.Exception.Message) -Source 'Installer' -Severity 3
+                Write-LogEntry -Message ("Failed to install module [{0}] for Windows PowerShell 5.1: {1}" -f $SelectedModule,$_.Exception.Message) -Source 'InstallModules' -Severity 3
             }
         }
     }
@@ -3723,7 +3724,7 @@ If($Global:UI.OutputData.AdditionalDownloads)
 {
     $startStep++
     #additional downloads
-    Write-LogEntry -Message ("[{0} of {1}] Processing additional downloads" -f $startStep,$totalSteps) -Source 'Installer' -Severity 0
+    Write-LogEntry -Message ("[{0} of {1}] Processing additional downloads" -f $startStep,$totalSteps) -Source 'AddDownloads' -Severity 0
     Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarMain' -Step $startStep -MaxStep $totalSteps
     Foreach($DownloadID in $Global:UI.OutputData.AdditionalDownloads)
     {
@@ -3731,11 +3732,11 @@ If($Global:UI.OutputData.AdditionalDownloads)
         #get solution but only where additional download is avaialble
         $DownloadItem = Get-AdditionalDownloadsMapping -MappingConfig $UIConfig.SolutionGroupedModules -MappingId $DownloadID
         If(-Not $DownloadItem){
-            Write-LogEntry -Message ("Download item [{0}] not found" -f $DownloadID) -Source 'Installer' -Severity 3
+            Write-LogEntry -Message ("Download item [{0}] not found" -f $DownloadID) -Source 'AddDownloads' -Severity 3
             Continue
         }
         Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarSub' -Step $i -MaxSteps $Global:UI.OutputData.AdditionalDownloads.count -Message ("Installing [{0}]..." -f $DownloadItem.DownloadName)
-        Write-LogEntry -Message ("Downloading [{0}] from [{1}]" -f $DownloadItem.DownloadName,$DownloadItem.DownloadUrl) -Source 'Installer' -Severity 0
+        Write-LogEntry -Message ("Downloading [{0}] from [{1}]" -f $DownloadItem.DownloadName,$DownloadItem.DownloadUrl) -Source 'AddDownloads' -Severity 0
         #DO ACTION
 
         #build destination path
@@ -3750,31 +3751,31 @@ If($Global:UI.OutputData.AdditionalDownloads)
         Invoke-WebRequest -Uri $DownloadItem.DownloadUrl -OutFile $DownloadPath -ErrorAction Stop
 
         #install File
-        Write-LogEntry -Message ("Installing [{0}]]" -f $DownloadItem.DownloadName,$DownloadPath) -Source 'Installer' -Severity 0
+        Write-LogEntry -Message ("Installing [{0}]]" -f $DownloadItem.DownloadName,$DownloadPath) -Source 'AddDownloads' -Severity 0
         switch($DownloadItem.DownloadType){
             'MSI'{
-                Write-LogEntry -Message ("RUNNING MSI [msiexec /i `"{0}`" /qn /norestart]" -f $DownloadPath) -Source 'Installer' -Severity 0 -Verbose
+                Write-LogEntry -Message ("RUNNING MSI [msiexec /i `"{0}`" /qn /norestart]" -f $DownloadPath) -Source 'AddDownloads' -Severity 0 -Verbose
                 Start-Process -FilePath msiexec -ArgumentList "/i `"$DownloadPath`" /qn /norestart" -Wait
             }
             'Executable'{
-                Write-LogEntry -Message ("RUNNING EXECUTABLE [{0} /quiet]" -f $DownloadPath) -Source 'Installer' -Severity 0 -Verbose
+                Write-LogEntry -Message ("RUNNING EXECUTABLE [{0} /quiet]" -f $DownloadPath) -Source 'AddDownloads' -Severity 0 -Verbose
                 Start-Process -FilePath $DownloadPath -ArgumentList "/quiet" -Wait
             }
             'Zip'{
-                Write-LogEntry -Message ("Extracting ZIP [{0}] to [{1}]" -f $DownloadPath,$DestinationPath) -Source 'Installer' -Severity 0 -Verbose
+                Write-LogEntry -Message ("Extracting ZIP [{0}] to [{1}]" -f $DownloadPath,$DestinationPath) -Source 'AddDownloads' -Severity 0 -Verbose
                 Expand-Archive -Path $DownloadPath -DestinationPath $DestinationPath -Force
             }
             'MSIX'{
-                Write-LogEntry -Message ("RUNNING MSIX [Add-AppxPackage `"{0}`"]" -f $DownloadPath) -Source 'Installer' -Severity 0 -Verbose
+                Write-LogEntry -Message ("RUNNING MSIX [Add-AppxPackage `"{0}`"]" -f $DownloadPath) -Source 'AddDownloads' -Severity 0 -Verbose
                 Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command Add-AppxPackage `"$DownloadPath`"" -Wait
             }
             'File'{
-                Write-LogEntry -Message ("Copying file [{0}] to [{1}]" -f $FileName,$DestinationPath) -Source 'Installer' -Severity 0 -Verbose
+                Write-LogEntry -Message ("Copying file [{0}] to [{1}]" -f $FileName,$DestinationPath) -Source 'AddDownloads' -Severity 0 -Verbose
                 New-Item -Path $DestinationPath -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
                 Copy-Item -Path $DownloadPath -Destination $DestinationPath -Force
             }
             default{
-                Write-LogEntry -Message ("Unknown file type [{0}] for [{1}]" -f $DownloadItem.DownloadType,$DownloadItem.DownloadName) -Source 'Installer' -Severity 3
+                Write-LogEntry -Message ("Unknown file type [{0}] for [{1}]" -f $DownloadItem.DownloadType,$DownloadItem.DownloadName) -Source 'AddDownloads' -Severity 3
             }
         }
     }
@@ -3794,10 +3795,11 @@ Close-SequenceWindow -Runspace $Global:installSequence
 If($TagDetectionPath){
     $TagName = $UIconfig.Title -replace '\W+',''
     $TagVersion = $UIconfig.Version
-    $TagFullPath = "$TagDetectionPath\$TagName.$TagVersion.tag"
+    $TagFullPath = "$TagDetectionPath\$TagName\$TagName.$TagVersion.tag"
     New-Item -Path $TagDetectionPath -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
+    New-Item -Path "$TagDetectionPath\$TagName" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
     #remove old tag
-    Get-ChildItem -Path $TagFullPath -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+    #Get-ChildItem -Path $TagFullPath -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
     Set-Content -Path $TagFullPath -Value $Global:UI.OutputData.SelectedModules -Force
     Write-LogEntry -Message ("Created tagged file [{0}]" -f $TagFullPath) -Source $MyInvocation.MyCommand.Name -Severity 1
 }
