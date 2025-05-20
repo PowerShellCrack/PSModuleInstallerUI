@@ -20,7 +20,8 @@ param(
     [switch]$ForceNewModuleData,
     [switch]$ForceNewSolutionData,
     [switch]$SkipSolutionData,
-    [switch]$SimulateInstall
+    [switch]$SimulateInstall,
+    [switch]$ExportUIData
 )
 
 
@@ -2994,10 +2995,10 @@ Function Remove-PSModuleFolder {
             {
                 Try{
                     #Write-LogEntry -Message "Removing module folder: $Path" -Source $MyInvocation.MyCommand.Name -Severity 1 -Verbose
-                    Write-Host "Removing module folder: $Path" -ForegroundColor Cyan
+                    Write-Verbose "Removing module folder: $Path"
                     Remove-Item -Path $Path -Recurse -Force | Out-Null
                 }Catch{
-                    Write-Host "Failed to remove module folder: $Path. Error: $($_.Exception.Message)" -ForegroundColor Red
+                    Write-Error "Failed to remove module folder: $Path. Error: $($_.Exception.Message)"
                     #Write-LogEntry -Message "Failed to remove module folder: $Path. Error: $($_.Exception.Message)" -Source $MyInvocation.MyCommand.Name -Severity 3 -Verbose
                 }
     
@@ -3012,16 +3013,16 @@ Function Remove-PSModuleFolder {
                         if ($PSCmdlet.ShouldProcess($ParentDir, "Remove-Item"))
                         {
                             Try{
-                                Write-host "Removing empty parent directory: $ParentDir" -ForegroundColor Cyan
+                                Write-Verbose "Removing empty parent directory: $ParentDir"
                                 #Write-LogEntry -Message "Removing empty parent directory: $ParentDir" -Source $MyInvocation.MyCommand.Name -Severity 1 -Verbose
                                 Remove-Item -Path $ParentDir -Recurse -Force | Out-Null
                             }Catch{
-                                Write-Host "Failed to remove empty parent directory: $ParentDir. Error: $($_.Exception.Message)" -ForegroundColor Red
+                                Write-Error "Failed to remove empty parent directory: $ParentDir. Error: $($_.Exception.Message)"
                                 #Write-LogEntry -Message "Failed to remove empty parent directory: $ParentDir. Error: $($_.Exception.Message)" -Source $MyInvocation.MyCommand.Name -Severity 3 -Verbose
                             }
                         }
                     }Else{
-                        Write-Host "Parent directory $ParentDir is not empty. Skipping removal." -ForegroundColor Yellow
+                        Write-Error "Parent directory $ParentDir is not empty. Skipping removal."
                         #Write-LogEntry -Message "Parent directory $ParentDir is not empty. Skipping removal." -Source $MyInvocation.MyCommand.Name -Severity 1 -Verbose
                     }
                 }
@@ -3158,7 +3159,7 @@ $FileName = "$($scriptName)_$(Get-Date -Format 'yyyy-MM-dd_Thh-mm-ss-tt').log"
 If($LogFilePath){
     $LogFileFullPath = Join-Path $LogFilePath -ChildPath $FileName
 }else{
-    $LogFileFullPath = Join-Path "$env:Temp" -ChildPath $FileName
+    $LogFileFullPath = Join-Path $env:Temp -ChildPath $FileName
 }
 New-Item -Path (Split-Path $LogFileFullPath -Parent) -ItemType Directory -ErrorAction SilentlyContinue | Out-Null
 Write-Host "logging to file: $LogFileFullPath" -ForegroundColor Cyan
@@ -3509,6 +3510,7 @@ If($Global:UI.OutputData.RepairSelected)
     Update-SequenceProgressBar -Runspace $Global:installSequence -ProgressBar 'ProgressBarMain' -Step $startStep -MaxStep $totalSteps
     #Repair selected modules
     $i=0
+
     foreach($SelectedModule in $Global:UI.OutputData.SelectedModules)
     {
         $i++
@@ -3521,9 +3523,9 @@ If($Global:UI.OutputData.RepairSelected)
             Get-Module -Name $SelectedModule -ListAvailable | Uninstall-Module -Force -ErrorAction Stop
         }
         catch {
-            $InstalledModules | Where-Object { $_.Name -eq $SelectedModule} | Remove-PSModuleFolder
-
             Write-LogEntry -Message ("Failed to remove module [{0}]: {1}" -f $SelectedModule,$_.Exception.Message) -Source 'Repair' -Severity 3
+            #attempt to remove the module folder(s)
+            $InstalledModules | Where-Object { $_.Name -eq $SelectedModule} | Remove-PSModuleFolder -Verbose
         }
 
         try {
@@ -3548,7 +3550,7 @@ If($Global:UI.OutputData.RemoveAll)
     #remove all modules
     $i=0
     $maxCount = $Global:UI.InstalledModules.count
-
+    $ModulesFailedRemove = @()
     Foreach($RemoveModule in $Global:UI.InstalledModules)
     {
         $i++
@@ -3563,8 +3565,22 @@ If($Global:UI.OutputData.RemoveAll)
                 $RemovedModules += $RemoveModule.Name
             }
             catch {
-                Write-LogEntry -Message ("Failed to remove module [{0}]: {1}" -f $RemoveModule.Name,$_.Exception.Message) -Source 'RemoveModules' -Severity 3
+                Write-LogEntry -Message ("Failed to remove module [{0}]: {1}." -f $RemoveModule.Name,$_.Exception.Message) -Source 'RemoveModules' -Severity 3
+                #add to failed remove list
+                $ModulesFailedRemove += $RemoveModule
             }
+        }
+    }
+    
+    Foreach($ModuleFailedRemove in $ModulesFailedRemove){
+        Try{
+            Write-LogEntry -Message ("Removing module folder(s) [{0}]" -f $ModuleFailedRemove.Name) -Source 'RemoveModules' -Severity 0
+            $InstalledModules | Where-Object { $_.Name -eq $ModuleFailedRemove.Name} | Remove-PSModuleFolder -Verbose
+            $RemovedModules += $RemoveModule.Name
+        }
+        catch {
+            #if the module folder is not empty, remove the module folder
+            Write-LogEntry -Message ("Failed to remove module folder [{0}]: {1}" -f $ModuleFailedRemove.Name,$_.Exception.Message) -Source 'RemoveModules' -Severity 3
         }
     }
 }
@@ -3592,7 +3608,8 @@ If($Global:UI.OutputData.AutoUpdate)
                 Install-Module -Name $ModuleUpdate.Name -Scope $InstallContext -AllowClobber -Force -ErrorAction Stop
             }Else{
                 Write-LogEntry -Message ("Updating module [{0}]" -f $ModuleUpdate.Name) -Source 'UpdateModules' -Severity 0
-                Update-Module -Name $ModuleUpdate.Name -Scope $InstallContext -Force -ErrorAction Stop
+                #Update-Module -Name $ModuleUpdate.Name -Scope $InstallContext -Force -ErrorAction Stop
+                Update-Module -Name $ModuleUpdate.Name -Force -AcceptLicense -ErrorAction Stop 
             }
         }
         catch {
@@ -3790,14 +3807,18 @@ Write-LogEntry -Message "Installation complete" -Source $MyInvocation.MyCommand.
 Start-Sleep 5
 Close-SequenceWindow -Runspace $Global:installSequence
 
+If($ExportUIData){
+    $ExportFileName = $FileName -replace '\.log$','_UIData.xml'
+    Write-LogEntry -Message ("Exporting UI data to [{0}]" -f "$Env:Temp\$ExportFileName") -Source $MyInvocation.MyCommand.Name -Severity 1
+    $Global:UI | Export-Clixml -Path $Env:Temp\$ExportFileName -Force
+}
 #Tag for detection of completion
 #=======================================================================================
 If($TagDetectionPath){
     $TagName = $UIconfig.Title -replace '\W+',''
     $TagVersion = $UIconfig.Version
-    $TagFullPath = "$TagDetectionPath\$TagName\$TagName.$TagVersion.tag"
+    $TagFullPath = "$TagDetectionPath\$TagName.$TagVersion.tag"
     New-Item -Path $TagDetectionPath -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
-    New-Item -Path "$TagDetectionPath\$TagName" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
     #remove old tag
     #Get-ChildItem -Path $TagFullPath -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
     Set-Content -Path $TagFullPath -Value $Global:UI.OutputData.SelectedModules -Force

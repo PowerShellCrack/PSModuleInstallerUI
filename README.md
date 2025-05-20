@@ -67,13 +67,14 @@ By leveraging this UI as an app while using Intune Managed Installer and WDAC, y
 
 The script accepts the following parameters:
 
-- `-StoredDataPath` [string]: Specifies the path where data is stored.
-- `-TagDetectionPath` [string]: Specifies the path for tag detection, default is `"$env:ALLUSERSPROFILE\Company"`.
-- `-LogFilePath` [string]: Specifies the path for the log file.
+- `-StoredDataPath` [string]: Specifies the path where data is stored; default is `"$env:Temp"`
+- `-TagDetectionPath` [string]: Specifies the path for tag detection; default is `"$env:ALLUSERSPROFILE"`.
+- `-LogFilePath` [string]: Specifies the path for the log file; default is `"$env:Temp"`
 - `-ForceNewModuleData` [switch]: Forces the creation of new module data.
 - `-ForceNewSolutionData` [switch]: Forces the creation of new solution data.
 - `-SkipSolutionData` [switch]: Skips the processing of solution data.
-- `-SimulateInstall` [switch]: Simulates the installation process without making any changes.
+- `-SimulateInstall` [switch]: Simulates the installation process without making any changes (sets Whatif)
+- `-ExportUIData` [switch]: Exports UI data as PSObject XML. Can be used for troublehshooting
 
 ## UIConfig
 
