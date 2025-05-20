@@ -3609,7 +3609,7 @@ If($Global:UI.OutputData.AutoUpdate)
             }Else{
                 Write-LogEntry -Message ("Updating module [{0}]" -f $ModuleUpdate.Name) -Source 'UpdateModules' -Severity 0
                 #Update-Module -Name $ModuleUpdate.Name -Scope $InstallContext -Force -ErrorAction Stop
-                Update-Module -Name $ModuleUpdate.Name -Force -AcceptLicense -ErrorAction Stop 
+                Update-Module -Name $ModuleUpdate.Name -Force -ErrorAction Stop 
             }
         }
         catch {

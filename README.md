@@ -160,4 +160,14 @@ $Global:BuildSequence.Error
 $Global:InstallSequence.Error
 ```
 
+If your running the script via Intune/MECM, Use the ExportUIData switch to export the CLIXML, then when complete you can run
+
+```powershell
+#EXAMPLE
+#change date to current
+$UI = Import-CliXml -Path "$env:temp\PowerShellModuleManager_2025-05-20_T09-56-16-AM_UIData.xml"
+$UI.Error
+```
+
+
 If you have any issues, please submit them. 
